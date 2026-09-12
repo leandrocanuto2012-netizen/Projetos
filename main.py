@@ -407,7 +407,7 @@ async def receber_mensagem(request: Request):
             key = message_data.get('key', {})
             remetente = key.get('remoteJid')
             
-            # Ignora mensagens enviadas pelo próprio bot ou grupos (a menos que seja o grupo configurado)
+            # Ignora mensagens enviadas pelo próprio bot ou sem remetente
             if key.get('fromMe') or not remetente:
                 return {'status': 'ignorado'}
 
