@@ -35,11 +35,11 @@ EVOLUTION_URL = "https://evolution-api-gkgk.onrender.com"
 INSTANCE_NAME = "lc-banker"
 API_KEY = "sb_secret_CVBW9oXi0z3AVUjAOsFfyQ_T8096VAH"
 
-@app.get("/")
+app.get("/")
 def home():
     return {"status": "Bot L.C. Banker & Advisory online!"}
 
-@app.post("/webhook")
+app.post("/webhook")
 async def webhook_receiver(request: Request):
     try:
         data = await request.json()
