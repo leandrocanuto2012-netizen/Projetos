@@ -10,7 +10,7 @@ import uvicorn
 # 1. CONFIGURAÇÕES GLOBAIS & VARIÁVEIS DE AMBIENTE
 # -----------------------------------------------------------------------------
 SUPABASE_URL = os.getenv('SUPABASE_URL', 'https://kkzylqdyyrmfiayfuqfb.supabase.co')
-SUPABASE_KEY = os.getenv('SUPABASE_KEY', '')
+SUPABASE_KEY = os.getenv('SUPABASE_KEY', 'sb_publishable_f4-wjMnAMr114DOeqVO0Eg_RHSP-59l')
 
 # Configurações padronizadas da Evolution API v2
 EVOLUTION_API_URL = os.getenv('EVOLUTION_API_URL', 'https://evolution-api-gkgk.onrender.com')
