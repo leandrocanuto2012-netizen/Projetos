@@ -1,10 +1,10 @@
-import traceback
+import os
 import re
+import traceback
 from datetime import datetime
 import httpx
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, Request
 import uvicorn
-import os
 
 # -----------------------------------------------------------------------------
 # 1. CONFIGURAÇÕES GLOBAIS & VARIÁVEIS DE AMBIENTE
@@ -12,95 +12,23 @@ import os
 SUPABASE_URL = os.getenv('SUPABASE_URL', 'https://kkzylqdyyrmfiayfuqfb.supabase.co')
 SUPABASE_KEY = os.getenv('SUPABASE_KEY', '')
 
-EVOLUTION_API_URL = os.getenv('EVOLUTION_API_URL', 'https://lc-banker-v24-final.onrender.com')
+# Configurações padronizadas da Evolution API v2
+EVOLUTION_API_URL = os.getenv('EVOLUTION_API_URL', 'https://evolution-api-gkgk.onrender.com')
 EVOLUTION_TOKEN = os.getenv('EVOLUTION_TOKEN', 'sb_secret_CVBW9oXi0z3AVUjAOsFfyQ_T8096VAH')
-INSTANCE_NAME = os.getenv('EVOLUTION_INSTANCE', 'lc-banker-v10')
+INSTANCE_NAME = os.getenv('EVOLUTION_INSTANCE', 'lc-banker')
 ID_GRUPO_CORRETORES = os.getenv('CORRETORES_GROUP_ID', '9EE45C1B5E22-4654-A30B-E9C1D4D5E583.us')
 
 LIMITE_ALTO_CREDITO = 200000.00
 
-# Headers padrão para chamadas ao Supabase REST API
 def get_supabase_headers():
     return {
         "apikey": SUPABASE_KEY,
         "Authorization": f"Bearer {SUPABASE_KEY}",
         "Content-Type": "application/json",
-       "Prefer": "return=representation"
-        ##"headers" = {"apikey":"sb_secret_CVBW9oXi0z3AVUjAOsFfyQ_T8096VAH","Content-Type":"application/json"}
+        "Prefer": "return=representation"
     }
 
 app = FastAPI(title="L.C. Banker & Advisory Bot")
-# Configurações da Evolution API
-EVOLUTION_URL = "https://evolution-api-gkgk.onrender.com"
-INSTANCE_NAME = "lc-banker"
-API_KEY = "sb_secret_CVBW9oXi0z3AVUjAOsFfyQ_T8096VAH"
-
-app.get("/")
-def home():
-    return {"status": "Bot L.C. Banker & Advisory online!"}
-
-app.post("/webhook")
-async def webhook_receiver(request: Request):
-    try:
-        data = await request.json()
-        print(f"📦 Payload recebido: {data}")
-
-        # Identifica eventos de mensagem na Evolution API v2
-        event = data.get("event")
-        if event in ["messages.upsert", "MESSAGES_UPSERT"]:
-            msg_data = data.get("data", {})
-            key = msg_data.get("key", {})
-
-            # Ignora mensagens enviadas pelo próprio número do bot
-            if key.get("fromMe", False):
-                return {"status": "ignored_from_me"}
-
-            remote_jid = key.get("remoteJid")
-            
-            # Extrai o texto da mensagem (mensagem direta ou resposta estendida)
-            message_content = msg_data.get("message", {})
-            user_text = (
-                message_content.get("conversation")
-                or message_content.get("extendedTextMessage", {}).get("text")
-                or ""
-            ).strip()
-
-            print(f"📩 Mensagem de [{remote_jid}]: '{user_text}'")
-
-            # Lógica simples de resposta para teste
-            if user_text:
-                resposta = (
-                    "Olá! Seja bem-vindo à *L.C. Banker & Advisory*.\n\n"
-                    "Como posso ajudar o seu negócio hoje?"
-                )
-                await enviar_mensagem_whatsapp(remote_jid, resposta)
-
-        return {"status": "success"}
-
-    except Exception as e:
-        print(f"❌ Erro no processamento do webhook: {e}")
-        return {"status": "error", "detail": str(e)}
-
-async def enviar_mensagem_whatsapp(remote_jid: str, texto: str):
-    """Envia mensagem de texto de volta via Evolution API v2."""
-    endpoint = f"{EVOLUTION_URL}/message/sendText/{INSTANCE_NAME}"
-    
-    headers = {
-        "apikey": API_KEY,
-        "Content-Type": "application/json"
-    }
-
-    payload = {
-        "number": remote_jid,
-        "text": texto
-    }
-
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.post(endpoint, json=payload, headers=headers, timeout=10.0)
-            print(f"📤 Resposta do envio ({response.status_code}): {response.text}")
-        except Exception as err:
-            print(f"❌ Erro na requisição de envio: {err}")
 
 # -----------------------------------------------------------------------------
 # 2. MÁQUINA DE ESTADOS - FLUXO DE PERGUNTAS
@@ -187,9 +115,10 @@ async def enviar_mensagem_whatsapp(numero_destino: str, texto: str):
     payload = {'number': numero_destino, 'text': texto}
     try:
         async with httpx.AsyncClient() as client:
-            await client.post(url, json=payload, headers=headers, timeout=10.0)
+            res = await client.post(url, json=payload, headers=headers, timeout=10.0)
+            print(f"📤 Resposta do envio para {numero_destino} ({res.status_code}): {res.text}")
     except Exception as e:
-        print(f"Erro ao enviar mensagem para {numero_destino}: {e}")
+        print(f"❌ Erro ao enviar mensagem para {numero_destino}: {e}")
 
 async def notificar_grupo_corretores(dados: dict):
     url = f'{EVOLUTION_API_URL}/message/sendText/{INSTANCE_NAME}'
@@ -253,13 +182,11 @@ async def salvar_dados_lead(remetente: str, campo: str, valor: str):
     headers = get_supabase_headers()
     headers["Prefer"] = "resolution=merge-duplicates"
     
-    # Garante a existência da linha do lead
     payload_init = {"remetente": remetente, "celular": celular_limpo}
     try:
         async with httpx.AsyncClient() as client:
             await client.post(url_upsert, json=payload_init, headers=headers, timeout=5.0)
             
-            # Atualiza o campo específico
             url_update = f"{SUPABASE_URL}/rest/v1/leads_credito?remetente=eq.{remetente}"
             await client.patch(url_update, json={campo: valor}, headers=get_supabase_headers(), timeout=5.0)
     except Exception as e:
@@ -458,11 +385,9 @@ async def processar_mensagem_bot(remetente, texto_recebido, tipo_mensagem, messa
 # -----------------------------------------------------------------------------
 # 7. ROTAS E ENTRYPOINT DO FASTAPI
 # -----------------------------------------------------------------------------
-app = FastAPI(title="LC Banker Bot API")
-
 @app.get('/')
 async def root():
-    return {'status': 'online', 'service': 'LC Banker Bot'}
+    return {'status': 'online', 'service': 'L.C. Banker & Advisory Bot'}
 
 @app.get('/health')
 async def health_check():
@@ -472,37 +397,44 @@ async def health_check():
 async def receber_mensagem(request: Request):
     try:
         data = await request.json()
+        print(f"📦 Payload bruto: {data}")
+
+        event = data.get('event')
         message_data = data.get('data', {})
         
-        key = message_data.get('key', {})
-        remetente = key.get('remoteJid')
-        
-        # Ignora mensagens enviadas pelo próprio bot ou sem remetente
-        if key.get('fromMe') or not remetente:
-            return {'status': 'ignorado'}
+        # Filtra apenas o evento de mensagens recebidas
+        if event in ["messages.upsert", "MESSAGES_UPSERT"] or message_data:
+            key = message_data.get('key', {})
+            remetente = key.get('remoteJid')
+            
+            # Ignora mensagens enviadas pelo próprio bot ou grupos (a menos que seja o grupo configurado)
+            if key.get('fromMe') or not remetente:
+                return {'status': 'ignorado'}
 
-        message_obj = message_data.get('message', {})
-        tipo_mensagem = message_data.get('messageType')
+            message_obj = message_data.get('message', {})
+            tipo_mensagem = message_data.get('messageType')
 
-        # Extração do texto
-        texto_recebido = (
-            message_obj.get('conversation')
-            or message_obj.get('extendedTextMessage', {}).get('text')
-            or message_obj.get('imageMessage', {}).get('caption')
-            or message_obj.get('videoMessage', {}).get('caption')
-            or message_obj.get('documentMessage', {}).get('caption')
-            or message_obj.get('documentWithCaptionMessage', {})
-                          .get('message', {})
-                          .get('documentMessage', {})
-                          .get('caption')
-            or ''
-        ).strip()
+            # Extração de texto para diferentes tipos de mensagem
+            texto_recebido = (
+                message_obj.get('conversation')
+                or message_obj.get('extendedTextMessage', {}).get('text')
+                or message_obj.get('imageMessage', {}).get('caption')
+                or message_obj.get('videoMessage', {}).get('caption')
+                or message_obj.get('documentMessage', {}).get('caption')
+                or message_obj.get('documentWithCaptionMessage', {})
+                    .get('message', {})
+                    .get('documentMessage', {})
+                    .get('caption')
+                or ''
+            ).strip()
 
-        await processar_mensagem_bot(remetente, texto_recebido, tipo_mensagem, message_obj)
+            print(f"📩 Processando mensagem de [{remetente}]: '{texto_recebido}'")
+            await processar_mensagem_bot(remetente, texto_recebido, tipo_mensagem, message_obj)
+
         return {'status': 'sucesso'}
 
     except Exception as e:
-        print(f'Erro no processamento do webhook: {e}')
+        print(f'❌ Erro no processamento do webhook: {e}')
         traceback.print_exc()
         return {'status': 'erro'}
 
