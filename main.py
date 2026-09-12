@@ -20,13 +20,88 @@ ID_GRUPO_CORRETORES = os.getenv('CORRETORES_GROUP_ID', '9EE45C1B5E22-4654-A30B-E
 LIMITE_ALTO_CREDITO = 200000.00
 
 # Headers padrão para chamadas ao Supabase REST API
-def get_supabase_headers():
-    return {
-        "apikey": SUPABASE_KEY,
-        "Authorization": f"Bearer {SUPABASE_KEY}",
-        "Content-Type": "application/json",
-        "Prefer": "return=representation"
+headers = {
+    "apikey": "sb_secret_CVBW9oXi0z3AVUjAOsFfyQ_T8096VAH",
+    "Content-Type": "application/json"
+}
+##def get_supabase_headers():
+##    return {
+##        "apikey": SUPABASE_KEY,
+##        "Authorization": f"Bearer {SUPABASE_KEY}",
+##        "Content-Type": "application/json",
+##        "Prefer": "return=representation"
     }
+# Configurações da Evolution API
+EVOLUTION_URL = "https://evolution-api-gkgk.onrender.com"
+INSTANCE_NAME = "lc-banker"
+API_KEY = "sb_secret_CVBW9oXi0z3AVUjAOsFfyQ_T8096VAH"
+
+@app.get("/")
+def home():
+    return {"status": "Bot L.C. Banker & Advisory online!"}
+
+@app.post("/webhook")
+async def webhook_receiver(request: Request):
+    try:
+        data = await request.json()
+        print(f"📦 Payload recebido: {data}")
+
+        # Identifica eventos de mensagem na Evolution API v2
+        event = data.get("event")
+        if event in ["messages.upsert", "MESSAGES_UPSERT"]:
+            msg_data = data.get("data", {})
+            key = msg_data.get("key", {})
+
+            # Ignora mensagens enviadas pelo próprio número do bot
+            if key.get("fromMe", False):
+                return {"status": "ignored_from_me"}
+
+            remote_jid = key.get("remoteJid")
+            
+            # Extrai o texto da mensagem (mensagem direta ou resposta estendida)
+            message_content = msg_data.get("message", {})
+            user_text = (
+                message_content.get("conversation")
+                or message_content.get("extendedTextMessage", {}).get("text")
+                or ""
+            ).strip()
+
+            print(f"📩 Mensagem de [{remote_jid}]: '{user_text}'")
+
+            # Lógica simples de resposta para teste
+            if user_text:
+                resposta = (
+                    "Olá! Seja bem-vindo à *L.C. Banker & Advisory*.\n\n"
+                    "Como posso ajudar o seu negócio hoje?"
+                )
+                await enviar_mensagem_whatsapp(remote_jid, resposta)
+
+        return {"status": "success"}
+
+    except Exception as e:
+        print(f"❌ Erro no processamento do webhook: {e}")
+        return {"status": "error", "detail": str(e)}
+
+async def enviar_mensagem_whatsapp(remote_jid: str, texto: str):
+    """Envia mensagem de texto de volta via Evolution API v2."""
+    endpoint = f"{EVOLUTION_URL}/message/sendText/{INSTANCE_NAME}"
+    
+    headers = {
+        "apikey": API_KEY,
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "number": remote_jid,
+        "text": texto
+    }
+
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(endpoint, json=payload, headers=headers, timeout=10.0)
+            print(f"📤 Resposta do envio ({response.status_code}): {response.text}")
+        except Exception as err:
+            print(f"❌ Erro na requisição de envio: {err}")
 
 # -----------------------------------------------------------------------------
 # 2. MÁQUINA DE ESTADOS - FLUXO DE PERGUNTAS
