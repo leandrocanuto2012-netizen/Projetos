@@ -26,7 +26,7 @@ def get_supabase_headers():
         "Authorization": f"Bearer {SUPABASE_KEY}",
         "Content-Type": "application/json",
        "Prefer": "return=representation",
-        headers = {"apikey": "sb_secret_CVBW9oXi0z3AVUjAOsFfyQ_T8096VAH","Content-Type": "application/json"}
+        headers = {"apikey":"sb_secret_CVBW9oXi0z3AVUjAOsFfyQ_T8096VAH","Content-Type": "application/json"}
     }
 
 app = FastAPI(title="L.C. Banker & Advisory Bot")
