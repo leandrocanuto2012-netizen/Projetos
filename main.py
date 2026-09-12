@@ -18,19 +18,18 @@ INSTANCE_NAME = os.getenv('EVOLUTION_INSTANCE', 'lc-banker-v10')
 ID_GRUPO_CORRETORES = os.getenv('CORRETORES_GROUP_ID', '9EE45C1B5E22-4654-A30B-E9C1D4D5E583.us')
 
 LIMITE_ALTO_CREDITO = 200000.00
-
+app = FastAPI(title="L.C. Banker & Advisory Bot")
 # Headers padrão para chamadas ao Supabase REST API
-headers = {
-    "apikey": "sb_secret_CVBW9oXi0z3AVUjAOsFfyQ_T8096VAH",
-    "Content-Type": "application/json"
-}
-##def get_supabase_headers():
-##    return {
-##        "apikey": SUPABASE_KEY,
-##        "Authorization": f"Bearer {SUPABASE_KEY}",
-##        "Content-Type": "application/json",
-##        "Prefer": "return=representation"
-##    }
+def get_supabase_headers():
+    return {
+        "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {SUPABASE_KEY}",
+        "Content-Type": "application/json",
+       "Prefer": "return=representation"
+        headers = {"apikey": "sb_secret_CVBW9oXi0z3AVUjAOsFfyQ_T8096VAH","Content-Type": "application/json"
+    }
+
+
 # Configurações da Evolution API
 EVOLUTION_URL = "https://evolution-api-gkgk.onrender.com"
 INSTANCE_NAME = "lc-banker"
