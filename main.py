@@ -30,7 +30,7 @@ headers = {
 ##        "Authorization": f"Bearer {SUPABASE_KEY}",
 ##        "Content-Type": "application/json",
 ##        "Prefer": "return=representation"
-    }
+##    }
 # Configurações da Evolution API
 EVOLUTION_URL = "https://evolution-api-gkgk.onrender.com"
 INSTANCE_NAME = "lc-banker"
