@@ -8,6 +8,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
 
+@app.post("/webhook")
+@app.post("/webhook/{path:path}")
+
 SUPABASE_URL = os.getenv('SUPABASE_URL', 'https://kkzylqdyyrmfiayfuqfb.supabase.co')
 SUPABASE_KEY = os.getenv('SUPABASE_KEY', 'sb_publishable_f4-wjMnAMr114DOeqVO0Eg_RHSP-59l')
 EVOLUTION_API_URL = os.getenv('EVOLUTION_API_URL', 'https://evolution-api-gkgk.onrender.com')
@@ -15,8 +18,7 @@ EVOLUTION_TOKEN = os.getenv('EVOLUTION_TOKEN', 'lc-banker-token'),
 INSTANCE_NAME = os.getenv('EVOLUTION_INSTANCE', 'lc-banker')
 ID_GRUPO_CORRETORES = os.getenv('CORRETORES_GROUP_ID', '9EE45C1B5E22-4654-A30B-E9C1D4D5E583.us')
 LIMITE_ALTO_CREDITO = 200000.00
-@app.post("/webhook")
-@app.post("/webhook/{path:path}")
+
 async def webhook(request: Request, path: str = ""):
 
 def get_supabase_headers():
