@@ -5,35 +5,23 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
 load_dotenv()
+app = FastAPI(title="L.C. Banker V25.3")
 
-app = FastAPI(title="L.C. Banker V25.1 - LECO")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["*"]
-)
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=False, allow_methods=["*"], allow_headers=["*"], expose_headers=["*"])
 
 SUPABASE_URL = os.getenv("SUPABASE_URL", "https://kkzylqdyyrmfiayfuqfb.supabase.co")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY", "sb_publishable_f4-wjMnAMr114DOeqV00Eg_RHSP-591")
 EVOLUTION_API_URL = os.getenv("EVOLUTION_API_URL", "https://evolution-api-gkgk.onrender.com")
 EVOLUTION_TOKEN = os.getenv("EVOLUTION_TOKEN", "lc-banker-token")
 INSTANCE_NAME = os.getenv("EVOLUTION_INSTANCE", "lc-banker")
-
 LIMITE_ALTO = 200000.0
 
-def get_h():
-    return {
-        "apikey": SUPABASE_KEY,
-        "Authorization": f"Bearer {SUPABASE_KEY}",
-        "Content-Type": "application/json",
-        "Prefer": "return=representation"
-    }
+# ANTI-LOOP - trava mensagem duplicada da Evolution
+PROCESSADOS = set()
 
-# MENU COMPLETO PADRÃO BNP
+def get_h():
+    return {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}", "Content-Type": "application/json", "Prefer": "return=representation"}
+
 FLUXO = [
     {"id": 0, "estado": "AGUARDANDO_LGPD", "campo": "lgpd_autorizado", "pergunta": "Conforme a LGPD, você autoriza liberar seus dados para pesquisa e demais assuntos para se tornar nosso cliente?\n\nDigite:\n1 - Sim, autorizo\n2 - Não autorizo"},
     {"id": 1, "estado": "AGUARDANDO_NOME", "campo": "nome_completo", "pergunta": "Digite seu Nome Completo:"},
@@ -62,49 +50,52 @@ async def send(numero, texto):
         print(f"Erro send: {e}")
 
 async def get_estado(remetente):
-    url = f"{SUPABASE_URL}/rest/v1/controle_sessao?remetente=eq.{remetente}&select=estado"
+    url = f"{SUPABASE_URL}/rest/v1/controle_sessao?remetente=eq.{remetente}&order=created_at.desc&limit=1&select=estado"
     try:
         async with httpx.AsyncClient() as client:
             resp = await client.get(url, headers=get_h(), timeout=5.0)
             if resp.status_code == 200:
                 d = resp.json()
                 return d[0]["estado"] if d else None
-    except:
-        pass
+    except: pass
     return None
 
 async def set_estado(remetente, estado):
     try:
-        if estado is None:
-            url = f"{SUPABASE_URL}/rest/v1/controle_sessao?remetente=eq.{remetente}"
-            async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient() as client:
+            if estado is None:
+                url = f"{SUPABASE_URL}/rest/v1/controle_sessao?remetente=eq.{remetente}"
                 await client.delete(url, headers=get_h(), timeout=5.0)
-        else:
-            url = f"{SUPABASE_URL}/rest/v1/controle_sessao"
-            payload = {"remetente": remetente, "estado": estado}
-            hh = get_h()
-            hh["Prefer"] = "resolution=merge-duplicates"
-            async with httpx.AsyncClient() as client:
-                await client.post(url, json=payload, headers=hh, timeout=5.0)
+            else:
+                # TENTA ATUALIZAR, SE NAO EXISTIR CRIA
+                url_patch = f"{SUPABASE_URL}/rest/v1/controle_sessao?remetente=eq.{remetente}"
+                r = await client.patch(url_patch, json={"estado": estado}, headers=get_h(), timeout=5.0)
+                if r.status_code == 200 and len(r.json()) == 0: # nao achou pra atualizar
+                    url_post = f"{SUPABASE_URL}/rest/v1/controle_sessao"
+                    hh = get_h()
+                    hh["Prefer"] = "resolution=merge-duplicates"
+                    await client.post(url_post, json={"remetente": remetente, "estado": estado}, headers=hh, timeout=5.0)
+                elif r.status_code not in [200,204]:
+                    url_post = f"{SUPABASE_URL}/rest/v1/controle_sessao"
+                    hh = get_h()
+                    hh["Prefer"] = "resolution=merge-duplicates"
+                    await client.post(url_post, json={"remetente": remetente, "estado": estado}, headers=hh, timeout=5.0)
     except Exception as e:
-        print(e)
+        print(f"Erro set_estado: {e}")
 
 async def save_lead(remetente, campo, valor):
     try:
         cel = remetente.split("@")[0]
-        url = f"{SUPABASE_URL}/rest/v1/leads_credito"
-        hh = get_h()
-        hh["Prefer"] = "resolution=merge-duplicates"
         async with httpx.AsyncClient() as client:
-            await client.post(url, json={"remetente": remetente, "celular": cel}, headers=hh, timeout=5.0)
-            url2 = f"{SUPABASE_URL}/rest/v1/leads_credito?remetente=eq.{remetente}"
-            await client.patch(url2, json={campo: valor}, headers=get_h(), timeout=5.0)
+            hh = get_h()
+            hh["Prefer"] = "resolution=merge-duplicates"
+            await client.post(f"{SUPABASE_URL}/rest/v1/leads_credito", json={"remetente": remetente, "celular": cel}, headers=hh, timeout=5.0)
+            await client.patch(f"{SUPABASE_URL}/rest/v1/leads_credito?remetente=eq.{remetente}", json={campo: valor}, headers=get_h(), timeout=5.0)
     except Exception as e:
         print(e)
 
 @app.get("/")
-async def root():
-    return {"status": "online", "service": "L.C. Banker V25.1 LECO FIX"}
+async def root(): return {"status": "online", "service": "LECO V25.3 FIX LOOP"}
 
 @app.post("/webhook")
 @app.post("/webhook/{path:path}")
@@ -114,78 +105,67 @@ async def wh(request: Request, path: str = ""):
         payload = data.get("data", data)
         m = payload.get("messages", [payload])[0] if isinstance(payload.get("messages"), list) else payload
         key = m.get("key", {})
-        if key.get("fromMe"):
-            return {"status": "ok"}
+        msg_id = key.get("id", "")
+
+        # TRAVA LOOP DE WEBHOOK DUPLICADO
+        if msg_id in PROCESSADOS:
+            return {"status": "ok - duplicado"}
+        if msg_id:
+            PROCESSADOS.add(msg_id)
+            if len(PROCESSADOS) > 200: PROCESSADOS.clear()
+
+        if key.get("fromMe"): return {"status": "ok"}
         jid = key.get("remoteJid", "")
-        if not jid or "@g.us" in jid:
-            return {"status": "ok"}
+        if not jid or "@g.us" in jid: return {"status": "ok"}
 
         message = m.get("message", {})
-        txt = message.get("conversation") or message.get("extendedTextMessage", {}).get("text") or message.get("imageMessage", {}).get("caption") or message.get("documentMessage", {}).get("caption") or ""
+        txt = message.get("conversation") or message.get("extendedTextMessage", {}).get("text") or ""
         txt = txt.strip()
-
-        if not txt:
-            return {"status": "ok"}
+        if not txt: return {"status": "ok"}
 
         estado = await get_estado(jid)
+        print(f"JID: {jid} ESTADO: {estado} TXT: {txt}")
 
-        # INICIO - APRESENTAÇÃO LECO - SO EXECUTA 1 VEZ
         if estado is None:
-            if txt.lower() in ["oi", "ola", "olá", "menu", "inicio", "início", "iniciar"]:
-                intro = "Olá, tudo bem? 😊\n\nMeu nome é *Leco*, eu falo aqui da *L.C. Banker & Advisory*.\n\nEu sou a robô criada pelo nosso querido Leandro, que é o banker responsável pela plataforma, e estou aqui para te ajudar."
-                await send(jid, intro)
-                await set_estado(jid, FLUXO[0]["estado"])
+            if txt.lower() in ["oi","ola","olá","menu","inicio","início","1","iniciar"]:
+                await send(jid, "Olá, tudo bem? 😊\n\nMeu nome é *Leco*, eu falo aqui da *L.C. Banker & Advisory*.\n\nEu sou a robô criada pelo nosso querido Leandro, que é o banker responsável pela plataforma, e estou aqui para te ajudar.")
+                await set_estado(jid, "AGUARDANDO_LGPD")
                 await send(jid, FLUXO[0]["pergunta"])
-                return {"status": "ok"}
-            if txt == "1":
-                # se ja mandou 1 sem oi, inicia direto
-                intro = "Olá, tudo bem? 😊\n\nMeu nome é *Leco*, eu falo aqui da *L.C. Banker & Advisory*.\n\nEu sou a robô criada pelo nosso querido Leandro, que é o banker responsável pela plataforma."
-                await send(jid, intro)
-                await set_estado(jid, FLUXO[0]["estado"])
-                await send(jid, FLUXO[0]["pergunta"])
-                return {"status": "ok"}
             return {"status": "ok"}
 
-        # FLUXO NORMAL - JA ESTA CADASTRANDO
+        # SE JA ESTA NO FLUXO, O 1 VALE COMO SIM
+        if estado == "AGUARDANDO_LGPD":
+            if txt in ["2","nao","não","n","Nao"]:
+                await save_lead(jid, "lgpd_autorizado", "NAO")
+                await send(jid, "Poxa, muito obrigado pelo seu contato, fica até a próxima! 🙏")
+                await set_estado(jid, None)
+                return {"status": "ok"}
+            if txt in ["1","sim","s","Sim","SIM","autorizo"]:
+                await save_lead(jid, "lgpd_autorizado", "SIM")
+                await set_estado(jid, FLUXO[1]["estado"])
+                await send(jid, FLUXO[1]["pergunta"])
+                return {"status": "ok"}
+            await send(jid, "Responda 1 para SIM ou 2 para NÃO")
+            return {"status": "ok"}
+
         passo = next((p for p in FLUXO if p["estado"] == estado), None)
         if passo:
-            # LOGICA LGPD SEM LOOPING
-            if passo["estado"] == "AGUARDANDO_LGPD":
-                if txt.lower() in ["2", "não", "nao", "n"]:
-                    await save_lead(jid, passo["campo"], "NAO")
-                    await send(jid, "Poxa, muito obrigado pelo seu contato, fica até a próxima! 🙏")
-                    await set_estado(jid, None)
-                    return {"status": "ok"}
-                if txt.lower() in ["1", "sim", "s", "autorizo", "sim autorizo"]:
-                    await save_lead(jid, passo["campo"], "SIM")
-                    prox_id = 1
-                    await set_estado(jid, FLUXO[prox_id]["estado"])
-                    await send(jid, FLUXO[prox_id]["pergunta"])
-                    return {"status": "ok"}
-                else:
-                    await send(jid, "Responda apenas com:\n1 - Sim, autorizo\n2 - Não autorizo")
-                    return {"status": "ok"}
-
-            # SALVA DADO ATUAL
             await save_lead(jid, passo["campo"], txt)
-
             prox_id = passo["id"] + 1
-            if passo["estado"] == "AGUARDANDO_ESTADO_CIVIL" and txt in ["1", "4", "5"]:
+            if passo["estado"] == "AGUARDANDO_ESTADO_CIVIL" and txt in ["1","4","5"]:
                 prox_id = 8
             if passo["estado"] == "AGUARDANDO_VALOR":
                 try:
-                    v = float(re.sub(r'[^\d]', '', txt))
-                    if v <= LIMITE_ALTO:
-                        prox_id = 12
-                except:
-                    pass
+                    v = float(re.sub(r'[^\d]','',txt))
+                    if v <= LIMITE_ALTO: prox_id = 12
+                except: pass
 
             if prox_id < len(FLUXO):
                 await set_estado(jid, FLUXO[prox_id]["estado"])
                 await send(jid, FLUXO[prox_id]["pergunta"])
             else:
                 await set_estado(jid, None)
-                await send(jid, "Cadastro Concluído! ✅ Equipe L.C. Banker vai analisar e entrar em contato. Obrigada!")
+                await send(jid, "Cadastro Concluído! ✅ Equipe L.C. Banker vai analisar.")
     except Exception as e:
         print(f"ERRO: {e}")
         traceback.print_exc()
