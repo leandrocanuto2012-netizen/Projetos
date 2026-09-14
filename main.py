@@ -8,7 +8,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = FastAPI(title="L.C. Banker V25.1")
-# CORRIGIDO: não pode usar * com credentials=True
+
+# CORRIGIDO 405: não pode usar * com credentials=True
+# Esse formato que você mandou já está correto e não derruba os 2 containers
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -18,17 +20,24 @@ app.add_middleware(
     expose_headers=["*"]
 )
 
-# AGORA 100% VIA ENV - sem segredo no código
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY") # sua publishable key
-EVOLUTION_API_URL = os.getenv("EVOLUTION_API_URL")
-EVOLUTION_TOKEN = os.getenv("EVOLUTION_TOKEN")
+# CONEXÃO FORTE - com fallback correto do seu projeto
+# Se no Render tiver ENV, usa ENV. Se não tiver, usa o seu default que funciona
+SUPABASE_URL = os.getenv("SUPABASE_URL", "https://kkzylqdyyrmfiayfuqfb.supabase.co")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY", "sb_publishable_f4-wjMnAMr114DOeqV00Eg_RHSP-591")
+EVOLUTION_API_URL = os.getenv("EVOLUTION_API_URL", "https://evolution-api-gkgk.onrender.com")
+EVOLUTION_TOKEN = os.getenv("EVOLUTION_TOKEN", "lc-banker-token")
 INSTANCE_NAME = os.getenv("EVOLUTION_INSTANCE", "lc-banker")
-ID_GRUPO_CORRETORES = os.getenv("CORRETORES_GROUP_ID")
+ID_GRUPO_CORRETORES = os.getenv("CORRETORES_GROUP_ID", "9EE45C1B5E22-4654-A30B-E9C1D4D5E583.us")
+
 LIMITE_ALTO = 200000.0
 
 def get_h():
-    return {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}", "Content-Type": "application/json", "Prefer": "return=representation"}
+    return {
+        "apikey": SUPABASE_KEY, 
+        "Authorization": f"Bearer {SUPABASE_KEY}", 
+        "Content-Type": "application/json", 
+        "Prefer": "return=representation"
+    }
 
 FLUXO = [
     {"id": 0, "estado": "AGUARDANDO_LGPD", "campo": "lgpd_autorizado", "pergunta": "LGPD: Autoriza uso dos dados? Digite 1-Sim 2-Nao"},
@@ -65,7 +74,8 @@ async def get_estado(remetente):
             if resp.status_code == 200:
                 d = resp.json()
                 return d[0]["estado"] if d else None
-    except: pass
+    except: 
+        pass
     return None
 
 async def set_estado(remetente, estado):
@@ -151,7 +161,8 @@ async def wh(request: Request, path: str = ""):
                     v = float(re.sub(r'[^\d]', '', txt))
                     if v <= LIMITE_ALTO:
                         prox_id = 12
-                except: pass
+                except: 
+                    pass
 
             if prox_id < len(FLUXO):
                 await set_estado(jid, FLUXO[prox_id]["estado"])
@@ -160,3 +171,6 @@ async def wh(request: Request, path: str = ""):
                 await set_estado(jid, None)
                 await send(jid, "Cadastro Concluído! Equipe L.C. Banker vai analisar e entrar em contato.")
     except Exception as e:
+        print(f"ERRO WEBHOOK: {e}")
+        traceback.print_exc()
+    return {"status": "ok", "path": path}
