@@ -9,8 +9,6 @@ load_dotenv()
 
 app = FastAPI(title="L.C. Banker V25.1")
 
-# CORRIGIDO 405: não pode usar * com credentials=True
-# Esse formato que você mandou já está correto e não derruba os 2 containers
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -20,8 +18,6 @@ app.add_middleware(
     expose_headers=["*"]
 )
 
-# CONEXÃO FORTE - com fallback correto do seu projeto
-# Se no Render tiver ENV, usa ENV. Se não tiver, usa o seu default que funciona
 SUPABASE_URL = os.getenv("SUPABASE_URL", "https://kkzylqdyyrmfiayfuqfb.supabase.co")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY", "sb_publishable_f4-wjMnAMr114DOeqV00Eg_RHSP-591")
 EVOLUTION_API_URL = os.getenv("EVOLUTION_API_URL", "https://evolution-api-gkgk.onrender.com")
@@ -33,15 +29,16 @@ LIMITE_ALTO = 200000.0
 
 def get_h():
     return {
-        "apikey": SUPABASE_KEY, 
-        "Authorization": f"Bearer {SUPABASE_KEY}", 
-        "Content-Type": "application/json", 
+        "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {SUPABASE_KEY}",
+        "Content-Type": "application/json",
         "Prefer": "return=representation"
     }
 
+# FLUXO ATUALIZADO COM A LECO
 FLUXO = [
-    {"id": 0, "estado": "AGUARDANDO_LGPD", "campo": "lgpd_autorizado", "pergunta": "LGPD: Autoriza uso dos dados? Digite 1-Sim 2-Nao"},
-    {"id": 1, "estado": "AGUARDANDO_NOME", "campo": "nome_completo", "pergunta": "Digite seu Nome Completo:"},
+    {"id": 0, "estado": "AGUARDANDO_LGPD", "campo": "lgpd_autorizado", "pergunta": "Conforme a LGPD, você autoriza liberar seus dados para pesquisa e demais assuntos para se tornar nosso cliente?\n\nDigite:\n1️⃣ - Sim, autorizo\n2️⃣ - Não autorizo"},
+    {"id": 1, "estado": "AGUARDANDO_NOME", "campo": "nome_completo", "pergunta": "Perfeito! Vamos começar seu cadastro.\n\nDigite seu Nome Completo:"},
     {"id": 2, "estado": "AGUARDANDO_EMAIL", "campo": "email", "pergunta": "Digite seu E-mail:"},
     {"id": 3, "estado": "AGUARDANDO_CPF", "campo": "cpf", "pergunta": "Digite seu CPF (apenas numeros):"},
     {"id": 4, "estado": "AGUARDANDO_NASCIMENTO", "campo": "data_nascimento", "pergunta": "Digite sua Data de Nascimento DD/MM/AAAA:"},
@@ -74,7 +71,7 @@ async def get_estado(remetente):
             if resp.status_code == 200:
                 d = resp.json()
                 return d[0]["estado"] if d else None
-    except: 
+    except:
         pass
     return None
 
@@ -109,7 +106,7 @@ async def save_lead(remetente, campo, valor):
 
 @app.get("/")
 async def root():
-    return {"status": "online", "service": "L.C. Banker V25.1 FIX", "headers": "alocado"}
+    return {"status": "online", "service": "L.C. Banker V25.1 LECO", "headers": "alocado"}
 
 @app.get("/health")
 async def health():
@@ -138,30 +135,42 @@ async def wh(request: Request, path: str = ""):
             return {"status": "ok"}
 
         estado = await get_estado(jid)
+
+        # === INICIO LECO ===
         if estado is None:
-            if txt.lower() in ["oi", "ola", "olá", "menu", "inicio", "início"]:
-                await send(jid, "Olá! Seja bem-vindo a L.C. Banker & Advisory. Digite 1 para iniciar simulação Home Equity.")
-            elif txt == "1":
+            if txt.lower() in ["oi", "ola", "olá", "menu", "inicio", "início", "1"]:
+                intro = "Olá, tudo bem? 😊\n\nMeu nome é *Leco*, eu falo aqui da *L.C. Banker & Advisory*.\n\nEu sou a robô criada pelo nosso querido Leandro, que é o banker responsável pela plataforma, e estou aqui para te ajudar."
+                await send(jid, intro)
                 await set_estado(jid, FLUXO[0]["estado"])
                 await send(jid, FLUXO[0]["pergunta"])
             return {"status": "ok"}
 
         passo = next((p for p in FLUXO if p["estado"] == estado), None)
         if passo:
-            await save_lead(jid, passo["campo"], txt)
+            # TRATAMENTO LGPD - SIM OU NÃO
+            if passo["estado"] == "AGUARDANDO_LGPD":
+                if txt.lower() in ["2", "não", "nao", "n"]:
+                    await save_lead(jid, passo["campo"], "NAO")
+                    await send(jid, "Poxa, muito obrigado pelo seu contato, fica até a próxima! 🙏\nA L.C. Banker estará aqui quando precisar.")
+                    await set_estado(jid, None)
+                    return {"status": "ok"}
+                elif txt.lower() in ["1", "sim", "s", "autorizo"]:
+                    await save_lead(jid, passo["campo"], "SIM")
+                else:
+                    await send(jid, "Por favor, responda apenas com:\n1️⃣ - Sim\n2️⃣ - Não")
+                    return {"status": "ok"}
+            else:
+                await save_lead(jid, passo["campo"], txt)
 
-            # LÓGICA INTELIGENTE DE FLUXO
             prox_id = passo["id"] + 1
-            # Se for solteiro/divorciado/viuvo, pula cônjuge
             if passo["estado"] == "AGUARDANDO_ESTADO_CIVIL" and txt in ["1", "4", "5"]:
                 prox_id = 8
-            # Se valor baixo, pula 2o proponente
             if passo["estado"] == "AGUARDANDO_VALOR":
                 try:
                     v = float(re.sub(r'[^\d]', '', txt))
                     if v <= LIMITE_ALTO:
                         prox_id = 12
-                except: 
+                except:
                     pass
 
             if prox_id < len(FLUXO):
@@ -169,7 +178,7 @@ async def wh(request: Request, path: str = ""):
                 await send(jid, FLUXO[prox_id]["pergunta"])
             else:
                 await set_estado(jid, None)
-                await send(jid, "Cadastro Concluído! Equipe L.C. Banker vai analisar e entrar em contato.")
+                await send(jid, "Cadastro Concluído! ✅\nEquipe L.C. Banker vai analisar e entrar em contato. Obrigada por confiar na Leco!")
     except Exception as e:
         print(f"ERRO WEBHOOK: {e}")
         traceback.print_exc()
