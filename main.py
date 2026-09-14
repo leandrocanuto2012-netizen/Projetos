@@ -396,34 +396,4 @@ async def enviar_massa(request: Request, instance: str = None):
 @app.post('/webhook')
 async def receber_mensagem(request: Request):
     try:
-        data = await request.json()
-        print(f"Payload bruto: {data}")
-        event = data.get('event')
-        message_data = data.get('data', {})
-        if event in ["messages.upsert", "MESSAGES_UPSERT"] or message_data:
-            key = message_data.get('key', {})
-            remetente = key.get('remoteJid')
-            if key.get('fromMe') or not remetente:
-                return {'status': 'ignorado'}
-            message_obj = message_data.get('message', {})
-            tipo_mensagem = message_data.get('messageType')
-            texto_recebido = (
-                message_obj.get('conversation')
-                or message_obj.get('extendedTextMessage', {}).get('text')
-                or message_obj.get('imageMessage', {}).get('caption')
-                or message_obj.get('videoMessage', {}).get('caption')
-                or message_obj.get('documentMessage', {}).get('caption')
-                or message_obj.get('documentWithCaptionMessage', {}).get('message', {}).get('documentMessage', {}).get('caption')
-                or ''
-            ).strip()
-            print(f"Processando mensagem de [{remetente}]: '{texto_recebido}'")
-            await processar_mensagem_bot(remetente, texto_recebido, tipo_mensagem, message_obj)
-        return {'status': 'sucesso'}
-    except Exception as e:
-        print(f'Erro no processamento do webhook: {e}')
-        traceback.print_exc()
-        return {'status': 'erro'}
-
-if __name__ == "__main__":
-    port = int(os.getenv("PORT", 8080))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+        data = await request.json(
