@@ -1,5 +1,4 @@
 import os, re, traceback
-from datetime import datetime
 import httpx
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,7 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-app = FastAPI(title="L.C. Banker V25.1")
+app = FastAPI(title="L.C. Banker V25.1 - LECO")
 
 app.add_middleware(
     CORSMiddleware,
@@ -23,7 +22,6 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY", "sb_publishable_f4-wjMnAMr114DOeqV00Eg_
 EVOLUTION_API_URL = os.getenv("EVOLUTION_API_URL", "https://evolution-api-gkgk.onrender.com")
 EVOLUTION_TOKEN = os.getenv("EVOLUTION_TOKEN", "lc-banker-token")
 INSTANCE_NAME = os.getenv("EVOLUTION_INSTANCE", "lc-banker")
-ID_GRUPO_CORRETORES = os.getenv("CORRETORES_GROUP_ID", "9EE45C1B5E22-4654-A30B-E9C1D4D5E583.us")
 
 LIMITE_ALTO = 200000.0
 
@@ -35,10 +33,10 @@ def get_h():
         "Prefer": "return=representation"
     }
 
-# FLUXO ATUALIZADO COM A LECO
+# MENU COMPLETO PADRÃO BNP
 FLUXO = [
-    {"id": 0, "estado": "AGUARDANDO_LGPD", "campo": "lgpd_autorizado", "pergunta": "Conforme a LGPD, você autoriza liberar seus dados para pesquisa e demais assuntos para se tornar nosso cliente?\n\nDigite:\n1️⃣ - Sim, autorizo\n2️⃣ - Não autorizo"},
-    {"id": 1, "estado": "AGUARDANDO_NOME", "campo": "nome_completo", "pergunta": "Perfeito! Vamos começar seu cadastro.\n\nDigite seu Nome Completo:"},
+    {"id": 0, "estado": "AGUARDANDO_LGPD", "campo": "lgpd_autorizado", "pergunta": "Conforme a LGPD, você autoriza liberar seus dados para pesquisa e demais assuntos para se tornar nosso cliente?\n\nDigite:\n1 - Sim, autorizo\n2 - Não autorizo"},
+    {"id": 1, "estado": "AGUARDANDO_NOME", "campo": "nome_completo", "pergunta": "Digite seu Nome Completo:"},
     {"id": 2, "estado": "AGUARDANDO_EMAIL", "campo": "email", "pergunta": "Digite seu E-mail:"},
     {"id": 3, "estado": "AGUARDANDO_CPF", "campo": "cpf", "pergunta": "Digite seu CPF (apenas numeros):"},
     {"id": 4, "estado": "AGUARDANDO_NASCIMENTO", "campo": "data_nascimento", "pergunta": "Digite sua Data de Nascimento DD/MM/AAAA:"},
@@ -106,11 +104,7 @@ async def save_lead(remetente, campo, valor):
 
 @app.get("/")
 async def root():
-    return {"status": "online", "service": "L.C. Banker V25.1 LECO", "headers": "alocado"}
-
-@app.get("/health")
-async def health():
-    return {"status": "ok", "instance": INSTANCE_NAME}
+    return {"status": "online", "service": "L.C. Banker V25.1 LECO FIX"}
 
 @app.post("/webhook")
 @app.post("/webhook/{path:path}")
@@ -129,38 +123,51 @@ async def wh(request: Request, path: str = ""):
         message = m.get("message", {})
         txt = message.get("conversation") or message.get("extendedTextMessage", {}).get("text") or message.get("imageMessage", {}).get("caption") or message.get("documentMessage", {}).get("caption") or ""
         txt = txt.strip()
-        tipo = "imageMessage" if "imageMessage" in message else "documentMessage" if "documentMessage" in message else "conversation"
 
-        if not txt and tipo not in ["imageMessage", "documentMessage"]:
+        if not txt:
             return {"status": "ok"}
 
         estado = await get_estado(jid)
 
-        # === INICIO LECO ===
+        # INICIO - APRESENTAÇÃO LECO - SO EXECUTA 1 VEZ
         if estado is None:
-            if txt.lower() in ["oi", "ola", "olá", "menu", "inicio", "início", "1"]:
+            if txt.lower() in ["oi", "ola", "olá", "menu", "inicio", "início", "iniciar"]:
                 intro = "Olá, tudo bem? 😊\n\nMeu nome é *Leco*, eu falo aqui da *L.C. Banker & Advisory*.\n\nEu sou a robô criada pelo nosso querido Leandro, que é o banker responsável pela plataforma, e estou aqui para te ajudar."
                 await send(jid, intro)
                 await set_estado(jid, FLUXO[0]["estado"])
                 await send(jid, FLUXO[0]["pergunta"])
+                return {"status": "ok"}
+            if txt == "1":
+                # se ja mandou 1 sem oi, inicia direto
+                intro = "Olá, tudo bem? 😊\n\nMeu nome é *Leco*, eu falo aqui da *L.C. Banker & Advisory*.\n\nEu sou a robô criada pelo nosso querido Leandro, que é o banker responsável pela plataforma."
+                await send(jid, intro)
+                await set_estado(jid, FLUXO[0]["estado"])
+                await send(jid, FLUXO[0]["pergunta"])
+                return {"status": "ok"}
             return {"status": "ok"}
 
+        # FLUXO NORMAL - JA ESTA CADASTRANDO
         passo = next((p for p in FLUXO if p["estado"] == estado), None)
         if passo:
-            # TRATAMENTO LGPD - SIM OU NÃO
+            # LOGICA LGPD SEM LOOPING
             if passo["estado"] == "AGUARDANDO_LGPD":
                 if txt.lower() in ["2", "não", "nao", "n"]:
                     await save_lead(jid, passo["campo"], "NAO")
-                    await send(jid, "Poxa, muito obrigado pelo seu contato, fica até a próxima! 🙏\nA L.C. Banker estará aqui quando precisar.")
+                    await send(jid, "Poxa, muito obrigado pelo seu contato, fica até a próxima! 🙏")
                     await set_estado(jid, None)
                     return {"status": "ok"}
-                elif txt.lower() in ["1", "sim", "s", "autorizo"]:
+                if txt.lower() in ["1", "sim", "s", "autorizo", "sim autorizo"]:
                     await save_lead(jid, passo["campo"], "SIM")
-                else:
-                    await send(jid, "Por favor, responda apenas com:\n1️⃣ - Sim\n2️⃣ - Não")
+                    prox_id = 1
+                    await set_estado(jid, FLUXO[prox_id]["estado"])
+                    await send(jid, FLUXO[prox_id]["pergunta"])
                     return {"status": "ok"}
-            else:
-                await save_lead(jid, passo["campo"], txt)
+                else:
+                    await send(jid, "Responda apenas com:\n1 - Sim, autorizo\n2 - Não autorizo")
+                    return {"status": "ok"}
+
+            # SALVA DADO ATUAL
+            await save_lead(jid, passo["campo"], txt)
 
             prox_id = passo["id"] + 1
             if passo["estado"] == "AGUARDANDO_ESTADO_CIVIL" and txt in ["1", "4", "5"]:
@@ -178,8 +185,8 @@ async def wh(request: Request, path: str = ""):
                 await send(jid, FLUXO[prox_id]["pergunta"])
             else:
                 await set_estado(jid, None)
-                await send(jid, "Cadastro Concluído! ✅\nEquipe L.C. Banker vai analisar e entrar em contato. Obrigada por confiar na Leco!")
+                await send(jid, "Cadastro Concluído! ✅ Equipe L.C. Banker vai analisar e entrar em contato. Obrigada!")
     except Exception as e:
-        print(f"ERRO WEBHOOK: {e}")
+        print(f"ERRO: {e}")
         traceback.print_exc()
-    return {"status": "ok", "path": path}
+    return {"status": "ok"}
