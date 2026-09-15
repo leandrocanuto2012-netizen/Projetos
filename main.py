@@ -14,7 +14,7 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY", "sb_publishable_f4-wjMnAMr114DOeqV00Eg_
 EVOLUTION_API_URL = os.getenv("EVOLUTION_API_URL", "https://evolution-api-gkgk.onrender.com")
 EVOLUTION_TOKEN = os.getenv("EVOLUTION_TOKEN", "lc-banker-token")
 INSTANCE_NAME = os.getenv("INSTANCE_NAME", "lc-banker")
-SEU_NUMERO_DONO = os.getenv("SEU_NUMERO_DONO", "5541999999999@s.whatsapp.net") # << SEU NUMERO COM DDD 55
+SEU_NUMERO_DONO = os.getenv("SEU_NUMERO_DONO", "5541984865913@s.whatsapp.net") # << SEU NUMERO COM DDD 55
 
 # META AI - GROQ (LLAMA 3.3 DA META)
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "") # << VAI PEGAR DO RENDER > ENVIRONMENT
