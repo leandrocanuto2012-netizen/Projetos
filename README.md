@@ -1,1 +1,0 @@
-# BASE TOTAL - Layout total editável pelo sistema + integrações prontas + páginas pré-moldadas
