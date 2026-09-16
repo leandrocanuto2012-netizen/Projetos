@@ -1,0 +1,11 @@
+{
+  "company_id": "00000000-0000-0000-0000-000000000001",
+  "company_name": "Panificadora Afonso Pena",
+  "slogan": "Pães artesanais desde 1985",
+  "primary_color": "#D97706",
+  "secondary_color": "#92400E",
+  "bg_color": "#FFFBEB",
+  "text_color": "#1F2937",
+  "button_radius": "12px",
+  "font_family": "Poppins"
+}

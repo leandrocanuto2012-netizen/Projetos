@@ -1,16 +1,10 @@
 version: '3.8'
-
 services:
-  bot_lc:
-    build: .
-    container_name: bot_lc_service
-    ports:
-      - "5000:5000"
-    environment:
-      - PORT=5000
-      - EVOLUTION_API_URL=https://lc-banker-v24-final.onrender.com
-      - EVOLUTION_API_KEY=sb_secret_CVBW9oXi0z3AVUjAOsFfyQ_T8096VAH
-      - EVOLUTION_INSTANCE_NAME=lc-banker-v10
-      - SUPABASE_URL=https://kkzylqdyyrmfiayfuqfb.supabase.co
-      - SUPABASE_KEY=SUA_CHAVE_SUPABASE_AQUI
-    restart: always
+  postgres:
+    image: postgres:15
+  redis:
+    image: redis:7-alpine
+  api-erp:
+    build: ./backend/api-erp
+  landing-page:
+    build: ./frontend/landing
