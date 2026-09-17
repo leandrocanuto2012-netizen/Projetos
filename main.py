@@ -202,6 +202,67 @@ async def processa(jid, txt):
 @app.get("/")
 async def root():
     return {"ok": True, "versao": "V34 BONITINHO LID + ANTI-LOOP", "ia": AI_ATIVA, "instance": INSTANCE_NAME}
+from fastapi import Request
+import httpx
+import os
+
+@app.post("/webhook/whatsapp")
+async def webhook_whatsapp(request: Request):
+    try:
+        body = await request.json()
+
+        # Evolution manda assim: data.key.remoteJid e data.pushName
+        data = body.get("data") or body
+        key = data.get("key") or {}
+        remote_jid = key.get("remoteJid") or data.get("remoteJid") or ""
+        push_name = data.get("pushName") or data.get("push_name") or "Cliente WhatsApp"
+
+        # Limpa telefone: 5541984865913@s.whatsapp.net -> 5541984865913
+        phone = remote_jid.split("@")[0].replace("+","").replace(" ","")
+        if not phone or "@g.us" in remote_jid: # ignora grupo
+            return {"status": "ignored"}
+
+        supabase_url = os.getenv("SUPABASE_URL")
+        supabase_key = os.getenv("SUPABASE_KEY")
+
+        if not supabase_url or not supabase_key:
+            return {"status": "error", "msg": "SUPABASE_URL/KEY não configurado"}
+
+        # Tenta criar cliente (se já existir o Supabase vai reclamar, a gente ignora)
+        async with httpx.AsyncClient() as client:
+            # 1. Checa se já existe
+            check = await client.get(
+                f"{supabase_url}/rest/v1/customers",
+                params={"phone": f"eq.{phone}", "select": "id"},
+                headers={"apikey": supabase_key, "Authorization": f"Bearer {supabase_key}"}
+            )
+
+            if check.status_code == 200 and len(check.json()) > 0:
+                return {"status": "exists", "phone": phone}
+
+            # 2. Cria se não existe
+            await client.post(
+                f"{supabase_url}/rest/v1/customers",
+                json={
+                    "phone": phone,
+                    "name": push_name,
+                    "source": "whatsapp",
+                    "status": "lead"
+                },
+                headers={
+                    "apikey": supabase_key,
+                    "Authorization": f"Bearer {supabase_key}",
+                    "Content-Type": "application/json",
+                    "Prefer": "return=minimal"
+                }
+            )
+
+        print(f"✅ Cliente criado: {phone} - {push_name}")
+        return {"status": "created", "phone": phone, "name": push_name}
+
+    except Exception as e:
+        print(f"Erro webhook: {e}")
+        return {"status": "error", "error": str(e)}
 
 @app.get("/test-ia")
 async def test_ia(q: str = "qual a taxa?"):
