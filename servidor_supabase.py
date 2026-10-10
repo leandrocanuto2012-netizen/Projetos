@@ -137,8 +137,17 @@ def log_caixa_terminal(evento, usuario=None, detalhes=None):
             print(f"  {str(k).upper()}: {v}", flush=True)
 
 def garantir_schema():
-    """No Supabase as tabelas sao criadas pelo SQL. Aqui so garantimos dados padrao."""
+    """Garante tabelas extras e dados padrao no Supabase."""
     with DBConnection() as (conn, cur):
+        cur.execute("""CREATE TABLE IF NOT EXISTS produto_receitas (
+            id SERIAL PRIMARY KEY,
+            produto_id INT NOT NULL,
+            insumo_id INT NOT NULL,
+            insumo_nome VARCHAR(200),
+            quantidade_por_unidade NUMERIC(10,3) NOT NULL DEFAULT 0,
+            unidade VARCHAR(10) DEFAULT 'UN',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )""")
         cur.execute("SELECT COUNT(*) AS t FROM formas_pagamento_taxas")
         if (cur.fetchone() or {}).get("t", 0) == 0:
             cur.executemany("INSERT INTO formas_pagamento_taxas (nome,tipo,taxa_percentual,taxa_fixa,operacao,ativo) VALUES (%s,%s,%s,%s,%s,TRUE)",
@@ -363,6 +372,15 @@ class APIHandler(BaseHTTPRequestHandler):
                         "estoque_baixo":estoque_baixo,"pedidos_pendentes":pedidos_pendentes,
                         "vendas_7d":vendas_7d,"saldo_bancos":saldo_bancos
                     })
+
+                # ===== PRODUCAO / RECEITAS =====
+                if path == "/api/producao/receitas":
+                    pid = query.get("produto_id",[None])[0]
+                    if pid:
+                        cur.execute("SELECT * FROM produto_receitas WHERE produto_id=%s ORDER BY id", (pid,))
+                    else:
+                        cur.execute("SELECT * FROM produto_receitas ORDER BY produto_id, id LIMIT 500")
+                    return self.responder({"receitas": [dict(r) for r in (cur.fetchall() or [])]})
 
                 # ===== GRID 1: Bot Config =====
                 if path == "/api/bot/config":
@@ -726,6 +744,82 @@ class APIHandler(BaseHTTPRequestHandler):
                     else:
                         cur.execute("INSERT INTO site_config_grid (secao,nome,valor,tipo) VALUES (%s,%s,%s,'texto')", (secao, nome, valor))
                     return self.responder({"sucesso":True})
+
+                # ===== PRODUCAO / RECEITAS =====
+                if path == "/api/producao/receita/salvar":
+                    u = usuario_do_corpo(cur, dados)
+                    if not u: return self.responder({"erro":"Operador não identificado"}, 403)
+                    rid = dados.get("id")
+                    if rid:
+                        cur.execute("UPDATE produto_receitas SET insumo_id=%s, insumo_nome=%s, quantidade_por_unidade=%s, unidade=%s WHERE id=%s",
+                            (dados.get("insumo_id"), dados.get("insumo_nome"), numero_float(dados.get("quantidade_por_unidade"),0), dados.get("unidade","UN"), rid))
+                    else:
+                        cur.execute("INSERT INTO produto_receitas (produto_id,insumo_id,insumo_nome,quantidade_por_unidade,unidade) VALUES (%s,%s,%s,%s,%s)",
+                            (dados.get("produto_id"), dados.get("insumo_id"), dados.get("insumo_nome"),
+                             numero_float(dados.get("quantidade_por_unidade"),0), dados.get("unidade","UN")))
+                    return self.responder({"sucesso":True})
+
+                if path == "/api/producao/receita/excluir":
+                    u = usuario_do_corpo(cur, dados)
+                    if not u: return self.responder({"erro":"Operador não identificado"}, 403)
+                    cur.execute("DELETE FROM produto_receitas WHERE id=%s", (dados.get("id"),))
+                    return self.responder({"sucesso":True})
+
+                if path == "/api/producao/simular":
+                    pid = dados.get("produto_id"); qtd = numero_float(dados.get("qtd"),1)
+                    cur.execute("SELECT * FROM produto_receitas WHERE produto_id=%s", (pid,))
+                    receita = [dict(r) for r in (cur.fetchall() or [])]
+                    if not receita:
+                        return self.responder({"sucesso":False,"mensagem":"Este produto não tem receita cadastrada. Adicione os insumos primeiro."})
+                    cur.execute("SELECT * FROM produtos WHERE id=%s LIMIT 1", (pid,))
+                    prod = cur.fetchone()
+                    resultado = []
+                    falta = False
+                    for r in receita:
+                        necess = float(r["quantidade_por_unidade"]) * qtd
+                        cur.execute("SELECT COALESCE(SUM(qty),0) AS q FROM wms_estoque WHERE product_id=%s", (r["insumo_id"],))
+                        disp = float((cur.fetchone() or {}).get("q",0) or 0)
+                        suficiente = disp >= necess
+                        if not suficiente: falta = True
+                        resultado.append({"insumo":r["insumo_nome"],"insumo_id":r["insumo_id"],
+                            "necessario":necess,"disponivel":disp,"suficiente":suficiente,
+                            "unidade":r.get("unidade","UN")})
+                    return self.responder({"sucesso":True,"produto":dict(prod) if prod else {},
+                        "qtd_produzir":qtd,"ingredientes":resultado,"falta_insumo":falta})
+
+                if path == "/api/producao/confirmar":
+                    u = usuario_do_corpo(cur, dados)
+                    if not u: return self.responder({"erro":"Operador não identificado"}, 403)
+                    pid = dados.get("produto_id"); qtd = numero_float(dados.get("qtd"),1)
+                    # Primeiro simula pra garantir que tem insumo
+                    cur.execute("SELECT * FROM produto_receitas WHERE produto_id=%s", (pid,))
+                    receita = [dict(r) for r in (cur.fetchall() or [])]
+                    if not receita:
+                        return self.responder({"sucesso":False,"mensagem":"Sem receita cadastrada"})
+                    for r in receita:
+                        necess = float(r["quantidade_por_unidade"]) * qtd
+                        cur.execute("SELECT COALESCE(SUM(qty),0) AS q FROM wms_estoque WHERE product_id=%s", (r["insumo_id"],))
+                        disp = float((cur.fetchone() or {}).get("q",0) or 0)
+                        if disp < necess:
+                            return self.responder({"sucesso":False,"mensagem":f"Falta {r['insumo_nome']}: precisa de {necess}, tem {disp}"}, 400)
+                    # Dá baixa nos insumos
+                    cur.execute("SELECT nome, sku, preco_venda, custo FROM produtos WHERE id=%s LIMIT 1", (pid,))
+                    prod = cur.fetchone() or {}
+                    for r in receita:
+                        necess = float(r["quantidade_por_unidade"]) * qtd
+                        registrar_wms_movimento(cur, {"product_id":r["insumo_id"],"sku":"","produto_nome":r["insumo_nome"],"qty":necess,"valor_unitario":0},
+                            "SAIDA", "PRODUCAO", f"PROD-{pid}", u["matricula"])
+                        cur.execute("UPDATE wms_estoque SET qty=qty-%s WHERE product_id=%s", (necess, r["insumo_id"]))
+                    # Adiciona o produto acabado no estoque
+                    vu = float(prod.get("custo",0) or 0)
+                    cur.execute("""INSERT INTO wms_estoque (product_id,sku,produto_nome,location_code,qty,valor_unitario,valor_total)
+                        VALUES (%s,%s,%s,'PRODUCAO',%s,%s,%s)
+                        ON CONFLICT (product_id, location_code) DO UPDATE
+                        SET qty=wms_estoque.qty+EXCLUDED.qty, valor_total=(wms_estoque.qty+EXCLUDED.qty)*EXCLUDED.valor_unitario""",
+                        (pid, prod.get("sku",""), prod.get("nome","Produto"), qtd, vu, qtd*vu))
+                    registrar_wms_movimento(cur, {"product_id":pid,"sku":prod.get("sku",""),"produto_nome":prod.get("nome",""),"qty":qtd,"valor_unitario":vu},
+                        "ENTRADA", "PRODUCAO", f"PROD-{pid}", u["matricula"])
+                    return self.responder({"sucesso":True,"mensagem":f"Produção de {qtd}x {prod.get('nome','')} confirmada! Estoque atualizado."})
 
                 # ===== GRID 1: Bot =====
                 if path == "/api/bot/config":
