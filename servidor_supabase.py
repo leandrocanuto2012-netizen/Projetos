@@ -198,19 +198,29 @@ class APIHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         parsed = urlparse(self.path); path = parsed.path; query = parse_qs(parsed.query)
-        # Serve o frontend (dashboard.html) na raiz
-        if path in ("/", "/index.html", "/dashboard.html"):
+        # Serve arquivos estaticos: site publico na raiz, dashboard em /admin
+        arquivos_staticos = {
+            "/": ("site.html", "text/html; charset=utf-8"),
+            "/site": ("site.html", "text/html; charset=utf-8"),
+            "/site.html": ("site.html", "text/html; charset=utf-8"),
+            "/admin": ("dashboard.html", "text/html; charset=utf-8"),
+            "/dashboard": ("dashboard.html", "text/html; charset=utf-8"),
+            "/dashboard.html": ("dashboard.html", "text/html; charset=utf-8"),
+            "/index.html": ("site.html", "text/html; charset=utf-8"),
+        }
+        if path in arquivos_staticos:
+            nome_arq, ctype = arquivos_staticos[path]
             try:
                 base = os.path.dirname(os.path.abspath(__file__))
-                with open(os.path.join(base, "dashboard.html"), "rb") as f:
+                with open(os.path.join(base, nome_arq), "rb") as f:
                     conteudo = f.read()
                 self.send_response(200)
-                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Content-Type", ctype)
                 self.send_header("Access-Control-Allow-Origin", "*")
                 self.end_headers()
                 self.wfile.write(conteudo)
             except FileNotFoundError:
-                self.responder({"erro": "dashboard.html nao encontrado na mesma pasta"}, 404)
+                self.responder({"erro": f"{nome_arq} nao encontrado na mesma pasta"}, 404)
             return
         try:
             with DBConnection() as (conn, cur):
