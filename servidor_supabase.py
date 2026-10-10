@@ -198,9 +198,23 @@ class APIHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         parsed = urlparse(self.path); path = parsed.path; query = parse_qs(parsed.query)
+        # Serve o frontend (dashboard.html) na raiz
+        if path in ("/", "/index.html", "/dashboard.html"):
+            try:
+                base = os.path.dirname(os.path.abspath(__file__))
+                with open(os.path.join(base, "dashboard.html"), "rb") as f:
+                    conteudo = f.read()
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.end_headers()
+                self.wfile.write(conteudo)
+            except FileNotFoundError:
+                self.responder({"erro": "dashboard.html nao encontrado na mesma pasta"}, 404)
+            return
         try:
             with DBConnection() as (conn, cur):
-                if path in ("/","/api/health"):
+                if path == "/api/health":
                     cur.execute("SELECT 1 as ok"); cur.fetchone()
                     return self.responder({"status":"ok","banco":"supabase conectado"})
 
