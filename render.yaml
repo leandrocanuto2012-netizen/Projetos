@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: panificadora-erp
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python servidor_supabase.py
+    envVars:
+      - key: DATABASE_URI
+        sync: false
+      - key: PORT
+        value: 8080
