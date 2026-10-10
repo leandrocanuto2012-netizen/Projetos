@@ -1,0 +1,38 @@
+=== PANIFICADORA ERP - COMO RODAR ===
+
+PASSO 1: Instalar dependências
+  pip install pymysql python-dotenv
+
+PASSO 2: Criar o banco e carregar dados
+  mysql -u root -proot123 < banco.sql
+  mysql -u root -proot123 panificadora_db < dados_padrao.sql
+
+PASSO 3: Ligar o servidor
+  python servidor_local.py
+  (ele cria todas as tabelas automaticamente)
+
+PASSO 4: Abrir o sistema
+  Abra o arquivo dashboard.html no navegador (dê 2 cliques)
+  Login: AP-2026-0001  Senha: 123
+
+=== O QUE TEM NO SISTEMA ===
+- Dashboard com KPIs, gráfico de vendas, alertas e atalhos
+- Caixa / PDV: abrir caixa, lançar venda com vários itens, sangria, suprimento, fechar
+- Produtos, Clientes, Fornecedores, Funcionários (CRUD completo)
+- Vendas, Comandas, Pedidos do Site (mudar status)
+- Estoque WMS: entrada, saída, endereços, movimentações
+- Financeiro: contas a pagar/receber, baixa, tesouraria, autorizações
+- RH: ponto, férias, holerites
+- Logística: entregas
+- 3 GRIDS de IA:
+  Grid 1: Configurar Bot (nome, saudação, horário, endereço, regras + teste)
+  Grid 2: Gerente do Ambiente (status dos módulos, alertas, relatório de vendas)
+  Grid 3: IA de Vendas (chat com recomendações, carrinho, finalizar pedido)
+
+=== CONFIGURACAO ===
+Edite o arquivo .env se seu MySQL for diferente:
+  DB_HOST=localhost  DB_PORT=3306  DB_USER=root  DB_PASS=root123
+  DB_NAME=panificadora_db  PORT=8080
+
+O dashboard conecta em http://localhost:8080 (padrão).
+Se mudar a porta, edite no topo do <script> do dashboard.html: const API_BASE
