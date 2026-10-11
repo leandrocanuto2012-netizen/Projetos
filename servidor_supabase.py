@@ -322,7 +322,53 @@ class APIHandler(BaseHTTPRequestHandler):
                 if path == "/api/health":
                     cur.execute("SELECT 1 as ok"); cur.fetchone()
                     return self.responder({"status":"ok","banco":"supabase conectado"})
-
+                if path == "/api/bancos/config":
+                    cur.execute("SELECT * FROM integracoes_config ORDER BY tipo")
+                    cfgs = [dict(r) for r in (cur.fetchall() or [])]
+                    cur.execute("SELECT * FROM contas_bancarias ORDER BY id DESC LIMIT 100")
+                    cts = [dict(r) for r in (cur.fetchall() or [])]
+                    return self.responder({"configs": cfgs, "contas": cts})
+                if path == "/api/bancos/vinculos":
+                    cur.execute("SELECT * FROM contas_bancarias ORDER BY id DESC LIMIT 100")
+                    cts = [dict(r) for r in (cur.fetchall() or [])]
+                    cur.execute("SELECT * FROM maquininhas ORDER BY id DESC LIMIT 100")
+                    mqs = [dict(r) for r in (cur.fetchall() or [])]
+                    cur.execute("SELECT * FROM repasses_ifood ORDER BY id DESC LIMIT 100")
+                    ifs = [dict(r) for r in (cur.fetchall() or [])]
+                    return self.responder({"contas": cts, "maquininhas": mqs, "ifood": ifs})
+                if path == "/api/nf_lista":
+                    cur.execute("SELECT * FROM notas_fiscais ORDER BY id DESC LIMIT 100")
+                    return self.responder({"notas": [dict(r) for r in (cur.fetchall() or [])]})
+                if path == "/api/dre_resumo":
+                    comp = query.get("comp", [""])[0]
+                    cur.execute("SELECT * FROM notas_fiscais ORDER BY id DESC LIMIT 500")
+                    nfs = [dict(r) for r in (cur.fetchall() or [])]
+                    rec = sum(float(n.get("total") or 0) for n in nfs if n.get("tipo") == "SAIDA")
+                    imp = sum(float(n.get("total_impostos") or 0) for n in nfs if n.get("tipo") == "SAIDA")
+                    cus = sum(float(n.get("total") or 0) for n in nfs if n.get("tipo") == "ENTRADA")
+                    liq = rec - imp
+                    return self.responder({"receita": rec, "impostos": imp, "liq": liq, "custos": cus, "lucro": liq - cus})
+                if path == "/api/arquivos_lista":
+                    cur.execute("SELECT * FROM arquivos ORDER BY id DESC LIMIT 100")
+                    return self.responder({"arquivos": [dict(r) for r in (cur.fetchall() or [])]})
+                if path == "/api/agenda_lista":
+                    ano = query.get("ano", [None])[0]; mes = query.get("mes", [None])[0]
+                    cur.execute("SELECT * FROM eventos_agenda ORDER BY inicio LIMIT 200")
+                    evs = [dict(r) for r in (cur.fetchall() or [])]
+                    if ano and mes:
+                        pref = f"{ano}-{str(mes).zfill(2)}"
+                        evs = [e for e in evs if str(e.get("inicio") or "").startswith(pref)]
+                    return self.responder({"eventos": evs})
+                if path == "/api/rh/ponto_calc":
+                    cur.execute("SELECT * FROM ponto_registros ORDER BY data DESC, id DESC LIMIT 500")
+                    pts = [dict(r) for r in (cur.fetchall() or [])]
+                    cur.execute("SELECT * FROM ponto_ajustes ORDER BY id DESC LIMIT 200")
+                    ajs = [dict(r) for r in (cur.fetchall() or [])]
+                    cur.execute("SELECT * FROM atestados ORDER BY data DESC LIMIT 200")
+                    ats = [dict(r) for r in (cur.fetchall() or [])]
+                    cur.execute("SELECT matricula, nome, salario FROM funcionarios ORDER BY nome")
+                    fns = [dict(r) for r in (cur.fetchall() or [])]
+                    return self.responder({"ponto": pts, "ajustes": ajs, "atestados": ats, "funcionarios": fns})
                 GET = {
                     "/api/fornecedores": "SELECT * FROM fornecedores ORDER BY id DESC LIMIT 100",
                     "/api/produtos": "SELECT * FROM produtos ORDER BY id DESC LIMIT 200",
