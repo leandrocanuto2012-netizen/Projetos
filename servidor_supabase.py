@@ -216,18 +216,6 @@ def garantir_schema():
         else:
             cur.execute("INSERT INTO funcionarios (matricula,nome,cargo,role,senha_hash,permissoes,status) VALUES (%s,%s,%s,%s,%s,%s,'ATIVO')",
                 ("AP-2026-0001","Administrador","Gerente Geral","admin",hash_senha("123"),json.dumps(MODULOS_PADRAO)))
-            cur.execute("""CREATE TABLE IF NOT EXISTS contas_bancarias (id SERIAL PRIMARY KEY, banco TEXT, ag_conta TEXT, provedor TEXT DEFAULT 'MANUAL', item_id TEXT, saldo NUMERIC DEFAULT 0, ultimo_sync TIMESTAMP, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
-            cur.execute("""CREATE TABLE IF NOT EXISTS integracoes_config (id SERIAL PRIMARY KEY, tipo TEXT UNIQUE, provedor TEXT, api_key TEXT, client_id TEXT, client_secret TEXT, config_extra TEXT, ativo BOOLEAN DEFAULT FALSE, ultimo_sync TIMESTAMP, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
-            cur.execute("""CREATE TABLE IF NOT EXISTS maquininhas (id SERIAL PRIMARY KEY, operadora TEXT, taxa NUMERIC DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
-            cur.execute("""CREATE TABLE IF NOT EXISTS repasses_ifood (id SERIAL PRIMARY KEY, periodo TEXT, bruto NUMERIC DEFAULT 0, taxa NUMERIC DEFAULT 0, liquido NUMERIC DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
-            cur.execute("""CREATE TABLE IF NOT EXISTS boletos (id SERIAL PRIMARY KEY, conta_id INT, nosso_numero TEXT, link TEXT, linha_digitavel TEXT, valor NUMERIC DEFAULT 0, vencimento DATE, status TEXT DEFAULT 'EMITIDO', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
-            cur.execute("""CREATE TABLE IF NOT EXISTS notas_fiscais (id SERIAL PRIMARY KEY, tipo TEXT, numero TEXT, pessoa TEXT, total NUMERIC DEFAULT 0, total_impostos NUMERIC DEFAULT 0, aliq_icms NUMERIC DEFAULT 0, aliq_pis NUMERIC DEFAULT 0, aliq_cofins NUMERIC DEFAULT 0, aliq_iss NUMERIC DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
-            cur.execute("""CREATE TABLE IF NOT EXISTS lancamentos_contabeis (id SERIAL PRIMARY KEY, origem TEXT, referencia_id INT, descricao TEXT, valor NUMERIC DEFAULT 0, tipo TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
-            cur.execute("""CREATE TABLE IF NOT EXISTS arquivos (id SERIAL PRIMARY KEY, categoria TEXT, referencia TEXT, nome TEXT, url TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
-            cur.execute("""CREATE TABLE IF NOT EXISTS eventos_agenda (id SERIAL PRIMARY KEY, titulo TEXT, inicio TIMESTAMP, fim TIMESTAMP, tipo TEXT, responsavel TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
-            cur.execute("""CREATE TABLE IF NOT EXISTS ponto_registros (id SERIAL PRIMARY KEY, funcionario_matricula TEXT, data DATE, entrada TIME, saida TIME, pausa_min NUMERIC DEFAULT 60, horas_trabalhadas NUMERIC DEFAULT 8, horas_extras NUMERIC DEFAULT 0, status TEXT DEFAULT 'ATIVO', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
-            cur.execute("""CREATE TABLE IF NOT EXISTS ponto_ajustes (id SERIAL PRIMARY KEY, ponto_id INT, funcionario_matricula TEXT, data_ref DATE, campo TEXT, valor_antigo TEXT, valor_novo TEXT, motivo TEXT, status TEXT DEFAULT 'PENDENTE', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
-            cur.execute("""CREATE TABLE IF NOT EXISTS atestados (id SERIAL PRIMARY KEY, funcionario_matricula TEXT, data DATE, dias NUMERIC DEFAULT 1, motivo TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
         conn.commit()
     print("Schema verificado no Supabase.", flush=True)
 
@@ -322,53 +310,7 @@ class APIHandler(BaseHTTPRequestHandler):
                 if path == "/api/health":
                     cur.execute("SELECT 1 as ok"); cur.fetchone()
                     return self.responder({"status":"ok","banco":"supabase conectado"})
-                if path == "/api/bancos/config":
-                    cur.execute("SELECT * FROM integracoes_config ORDER BY tipo")
-                    cfgs = [dict(r) for r in (cur.fetchall() or [])]
-                    cur.execute("SELECT * FROM contas_bancarias ORDER BY id DESC LIMIT 100")
-                    cts = [dict(r) for r in (cur.fetchall() or [])]
-                    return self.responder({"configs": cfgs, "contas": cts})
-                if path == "/api/bancos/vinculos":
-                    cur.execute("SELECT * FROM contas_bancarias ORDER BY id DESC LIMIT 100")
-                    cts = [dict(r) for r in (cur.fetchall() or [])]
-                    cur.execute("SELECT * FROM maquininhas ORDER BY id DESC LIMIT 100")
-                    mqs = [dict(r) for r in (cur.fetchall() or [])]
-                    cur.execute("SELECT * FROM repasses_ifood ORDER BY id DESC LIMIT 100")
-                    ifs = [dict(r) for r in (cur.fetchall() or [])]
-                    return self.responder({"contas": cts, "maquininhas": mqs, "ifood": ifs})
-                if path == "/api/nf_lista":
-                    cur.execute("SELECT * FROM notas_fiscais ORDER BY id DESC LIMIT 100")
-                    return self.responder({"notas": [dict(r) for r in (cur.fetchall() or [])]})
-                if path == "/api/dre_resumo":
-                    comp = query.get("comp", [""])[0]
-                    cur.execute("SELECT * FROM notas_fiscais ORDER BY id DESC LIMIT 500")
-                    nfs = [dict(r) for r in (cur.fetchall() or [])]
-                    rec = sum(float(n.get("total") or 0) for n in nfs if n.get("tipo") == "SAIDA")
-                    imp = sum(float(n.get("total_impostos") or 0) for n in nfs if n.get("tipo") == "SAIDA")
-                    cus = sum(float(n.get("total") or 0) for n in nfs if n.get("tipo") == "ENTRADA")
-                    liq = rec - imp
-                    return self.responder({"receita": rec, "impostos": imp, "liq": liq, "custos": cus, "lucro": liq - cus})
-                if path == "/api/arquivos_lista":
-                    cur.execute("SELECT * FROM arquivos ORDER BY id DESC LIMIT 100")
-                    return self.responder({"arquivos": [dict(r) for r in (cur.fetchall() or [])]})
-                if path == "/api/agenda_lista":
-                    ano = query.get("ano", [None])[0]; mes = query.get("mes", [None])[0]
-                    cur.execute("SELECT * FROM eventos_agenda ORDER BY inicio LIMIT 200")
-                    evs = [dict(r) for r in (cur.fetchall() or [])]
-                    if ano and mes:
-                        pref = f"{ano}-{str(mes).zfill(2)}"
-                        evs = [e for e in evs if str(e.get("inicio") or "").startswith(pref)]
-                    return self.responder({"eventos": evs})
-                if path == "/api/rh/ponto_calc":
-                    cur.execute("SELECT * FROM ponto_registros ORDER BY data DESC, id DESC LIMIT 500")
-                    pts = [dict(r) for r in (cur.fetchall() or [])]
-                    cur.execute("SELECT * FROM ponto_ajustes ORDER BY id DESC LIMIT 200")
-                    ajs = [dict(r) for r in (cur.fetchall() or [])]
-                    cur.execute("SELECT * FROM atestados ORDER BY data DESC LIMIT 200")
-                    ats = [dict(r) for r in (cur.fetchall() or [])]
-                    cur.execute("SELECT matricula, nome, salario FROM funcionarios ORDER BY nome")
-                    fns = [dict(r) for r in (cur.fetchall() or [])]
-                    return self.responder({"ponto": pts, "ajustes": ajs, "atestados": ats, "funcionarios": fns})
+
                 GET = {
                     "/api/fornecedores": "SELECT * FROM fornecedores ORDER BY id DESC LIMIT 100",
                     "/api/produtos": "SELECT * FROM produtos ORDER BY id DESC LIMIT 200",
@@ -593,88 +535,7 @@ class APIHandler(BaseHTTPRequestHandler):
         try:
             with DBConnection() as (conn, cur):
                 path = urlparse(self.path).path
-                if path == "/api/bancos/config":
-                    d = self.get_body()
-                    cur.execute("""INSERT INTO integracoes_config (tipo, provedor, api_key, client_id, client_secret, config_extra, ativo)
-                    VALUES (%s,%s,%s,%s,%s,%s,TRUE)
-                    ON CONFLICT (tipo) DO UPDATE SET provedor=EXCLUDED.provedor, api_key=EXCLUDED.api_key, client_id=EXCLUDED.client_id, client_secret=EXCLUDED.client_secret, config_extra=EXCLUDED.config_extra, ativo=TRUE""",
-                    (d.get("tipo"), d.get("provedor"), d.get("api_key"), d.get("client_id"), d.get("client_secret"), d.get("config_extra")))
-                    return self.responder({"sucesso": True})
-                if path == "/api/bancos/conta":
-                    d = self.get_body()
-                    cur.execute("INSERT INTO contas_bancarias (banco, ag_conta, provedor) VALUES (%s,%s,%s)", (d.get("banco"), d.get("ag_conta"), d.get("provedor") or "MANUAL"))
-                    return self.responder({"sucesso": True})
-                if path == "/api/bancos/maquininha":
-                    d = self.get_body()
-                    cur.execute("INSERT INTO maquininhas (operadora, taxa) VALUES (%s,%s)", (d.get("operadora"), numero_float(d.get("taxa"))))
-                    return self.responder({"sucesso": True})
-                if path == "/api/bancos/sync":
-                    d = self.get_body()
-                    cid = d.get("conta_id")
-                    cur.execute("""SELECT COALESCE(SUM(CASE WHEN tipo IN ('ENTRADA','RECEBIMENTO','VENDA','SUPRIMENTO') THEN valor ELSE 0 END),0)
-                    - COALESCE(SUM(CASE WHEN tipo IN ('SAIDA','SANGRIA','ENVIO_TESOURARIA') THEN valor ELSE 0 END),0) AS saldo FROM caixa_movimentos WHERE status='APROVADO'""")
-                    saldo = float((cur.fetchone() or {}).get("saldo") or 0)
-                    if cid:
-                        cur.execute("UPDATE contas_bancarias SET saldo=%s, ultimo_sync=NOW() WHERE id=%s", (saldo, cid))
-                    cur.execute("INSERT INTO lancamentos_contabeis (origem, descricao, valor, tipo) VALUES ('BANCO_AUTO','Sync saldo geral',%s,'ENTRADA')", (abs(saldo),))
-                    return self.responder({"sucesso": True, "modo": "LOCAL", "saldo": saldo})
-                if path == "/api/ifood/sync":
-                    d = self.get_body()
-                    tot = numero_float(d.get("total"))
-                    cur.execute("INSERT INTO site_pedidos (cliente_nome, telefone, forma_pagamento, total, status) VALUES (%s,%s,'IFOOD',%s,'CONFIRMADO') RETURNING id", (d.get("cliente_nome") or "Cliente iFood", d.get("telefone") or "", tot))
-                    pid = cur.fetchone()["id"]
-                    for it in (d.get("itens") or []):
-                        cur.execute("INSERT INTO wms_movimentos (produto_nome, tipo, qty, origem, documento) VALUES (%s,'SAIDA',%s,'IFOOD',%s)", (it.get("nome"), numero_float(it.get("qty"),1), f"IFOOD-{pid}"))
-                    cur.execute("INSERT INTO repasses_ifood (periodo, bruto, taxa, liquido) VALUES (TO_CHAR(NOW(),'YYYY-MM'),%s,%s,%s)", (tot, tot*0.27, tot*0.73))
-                    return self.responder({"sucesso": True, "pedido_id": pid})
-                if path == "/api/boletos/gerar":
-                    d = self.get_body()
-                    import random
-                    valor = numero_float(d.get("valor")); venc = d.get("vencimento"); pessoa = d.get("pessoa") or "Cliente"
-                    nosso = f"BL{random.randint(10000,99999)}"
-                    link = f"https://boleto.teste/{nosso}"
-                    linha = f"23793.38128 60007.827136 95000.063305 1 991700000{int(valor*100)}"
-                    cur.execute("INSERT INTO contas (tipo, descricao, pessoa, valor, vencimento, categoria, status) VALUES ('RECEBER',%s,%s,%s,%s,'BOLETO','ABERTO') RETURNING id", (d.get("descricao") or f"Boleto {nosso} - {pessoa}", pessoa, valor, venc))
-                    nid = cur.fetchone()["id"]
-                    cur.execute("INSERT INTO boletos (conta_id, nosso_numero, link, linha_digitavel, valor, vencimento) VALUES (%s,%s,%s,%s,%s,%s)", (nid, nosso, link, linha, valor, venc))
-                    return self.responder({"sucesso": True, "link": link, "linha_digitavel": linha, "nosso_numero": nosso})
-                if path == "/api/nf/criar":
-                    d = self.get_body()
-                    tot = numero_float(d.get("total"))
-                    icms = tot*numero_float(d.get("aliq_icms"))/100; pis = tot*numero_float(d.get("aliq_pis"))/100; cof = tot*numero_float(d.get("aliq_cofins"))/100; iss = tot*numero_float(d.get("aliq_iss"))/100
-                    timp = icms+pis+cof+iss
-                    cur.execute("INSERT INTO notas_fiscais (tipo, numero, pessoa, total, total_impostos, aliq_icms, aliq_pis, aliq_cofins, aliq_iss) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id", (d.get("tipo"), d.get("numero"), d.get("pessoa"), tot, timp, numero_float(d.get("aliq_icms")), numero_float(d.get("aliq_pis")), numero_float(d.get("aliq_cofins")), numero_float(d.get("aliq_iss"))))
-                    nid = cur.fetchone()["id"]
-                    cur.execute("INSERT INTO lancamentos_contabeis (origem, referencia_id, descricao, valor, tipo) VALUES ('NF',%s,%s,%s,%s)", (nid, f"NF {d.get('tipo')} {d.get('numero')}", tot, d.get("tipo")))
-                    return self.responder({"sucesso": True, "numero": d.get("numero"), "impostos": timp})
-                if path == "/api/dre/simular":
-                    d = self.get_body()
-                    fat = numero_float(d.get("faturamento")); cus = numero_float(d.get("custo")); reg = str(d.get("regime") or "SIMPLES").upper()
-                    if reg == "SIMPLES": pis=fat*0.0065; cof=fat*0.03; icms=fat*0.034; iss=fat*0.02
-                    elif reg == "PRESUMIDO": pis=fat*0.0065; cof=fat*0.03; icms=fat*numero_float(d.get("aliq_icms"),18)/100*0.3; iss=fat*numero_float(d.get("aliq_iss"),5)/100*0.32
-                    else: pis=fat*0.0165; cof=fat*0.076; icms=fat*numero_float(d.get("aliq_icms"),18)/100; iss=fat*numero_float(d.get("aliq_iss"),5)/100*0.1
-                    return self.responder({"pis": pis, "cofins": cof, "icms": icms, "iss": iss, "lucro": fat-(pis+cof+icms+iss)-cus})
-                if path == "/api/arquivos/upload_json":
-                    d = self.get_body()
-                    cur.execute("INSERT INTO arquivos (categoria, referencia, nome, url) VALUES (%s,%s,%s,%s)", (d.get("categoria"), d.get("referencia"), d.get("nome"), d.get("url")))
-                    return self.responder({"sucesso": True})
-                if path == "/api/agenda/criar":
-                    d = self.get_body()
-                    u = d.get("usuario") or {}
-                    cur.execute("INSERT INTO eventos_agenda (titulo, inicio, fim, tipo, responsavel) VALUES (%s,%s,%s,%s,%s)", (d.get("titulo"), d.get("inicio"), d.get("fim"), d.get("tipo"), u.get("matricula")))
-                    return self.responder({"sucesso": True})
-                if path == "/api/rh/ponto/registrar2":
-                    d = self.get_body()
-                    cur.execute("INSERT INTO ponto_registros (funcionario_matricula, data, entrada, saida, pausa_min, horas_trabalhadas, horas_extras) VALUES (%s,%s,%s,%s,%s,%s,%s)", (d.get("funcionario_matricula"), d.get("data"), d.get("entrada"), d.get("saida"), numero_float(d.get("pausa_min"),60), numero_float(d.get("horas_trabalhadas"),8), numero_float(d.get("horas_extras"),0)))
-                    return self.responder({"sucesso": True})
-                if path == "/api/rh/ponto/ajustar":
-                    d = self.get_body()
-                    cur.execute("INSERT INTO ponto_ajustes (ponto_id, funcionario_matricula, data_ref, campo, valor_antigo, valor_novo, motivo) VALUES (%s,%s,%s,%s,%s,%s,%s)", (d.get("ponto_id"), d.get("funcionario_matricula"), d.get("data_ref"), d.get("campo"), str(d.get("valor_antigo") or ""), str(d.get("valor_novo") or ""), d.get("motivo")))
-                    return self.responder({"sucesso": True})
-                if path == "/api/rh/atestados/criar":
-                    d = self.get_body()
-                    cur.execute("INSERT INTO atestados (funcionario_matricula, data, dias, motivo) VALUES (%s,%s,%s,%s)", (d.get("funcionario_matricula"), d.get("data"), numero_float(d.get("dias"),1), d.get("motivo")))
-                    return self.responder({"sucesso": True})
+
                 if path == "/api/login":
                     mat = dados.get("matricula"); senha = dados.get("senha")
                     cur.execute("SELECT * FROM funcionarios WHERE matricula=%s LIMIT 1", (mat,))
