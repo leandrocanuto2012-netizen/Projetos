@@ -103,14 +103,14 @@ class APIHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         from urllib.parse import urlparse as up, parse_qs as pq
         p=up(self.path); path=p.path; q=pq(p.query)
-        if path in ("/","/dashboard","/dashboard.html","/admin","/index.html"):
+        if path in ("/admin","/dashboard","/dashboard.html"):
             if self.serve_static("dashboard.html","text/html; charset=utf-8"): return
             if self.serve_static("site.html","text/html; charset=utf-8"): return
             return self.responder({"erro":"html nao achado"},404)
         if path in ("/novas.js","/public/novas.js"):
             if self.serve_static("novas.js","application/javascript; charset=utf-8"): return
             return self.responder({"erro":"novas.js nao achado"},404)
-        if path in ("/site","/site.html"):
+        if path in ("/","/site","/site.html"):
             if self.serve_static("site.html","text/html; charset=utf-8"): return
         try:
             with DBConnection() as (conn,cur):
