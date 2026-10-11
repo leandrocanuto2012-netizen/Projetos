@@ -95,13 +95,17 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13px}
     <div class="spacer"></div>
     <div class="top-icon" onclick="showView('dashboard')" title="Início"><i data-lucide="layout-grid"></i></div>
     <div class="top-icon" onclick="window.open('/site','_blank')" title="Ver Site Público"><i data-lucide="globe"></i></div>
-    <div class="top-icon" onclick="showView('kds')" title="Painel Cozinha (KDS)"><i data-lucide="chef-hat"></i></div>
-    <div class="top-icon" onclick="showView('integracoes')" title="Configurar Integrações / APIs"><i data-lucide="key"></i></div>
+    <div class="top-icon" onclick="showView('ia-vendas')" title="IA de Vendas"><i data-lucide="sparkles"></i></div>
+    <div class="top-icon" onclick="showView('arquivos')" title="Arquivos"><i data-lucide="folder-open"></i></div>
+    <div class="top-icon" onclick="showView('agenda')" title="Agenda"><i data-lucide="calendar"></i></div>
+    <div class="top-icon" onclick="showView('gerente')" title="Alertas"><i data-lucide="bell"></i></div>
+    <div class="top-icon" onclick="showView('kds')" title="Cozinha (KDS)"><i data-lucide="chef-hat"></i></div>
+    <div class="top-icon" onclick="showView('integracoes')" title="Configurar APIs"><i data-lucide="key"></i></div>
     <div class="user-avatar" onclick="fazerLogout()" title="Sair">AD</div>
   </header>
 
   <div class="banner">
-    <span>💡 Dica: No PDV/Caixa use <strong>F2</strong> (Nova Venda), <strong>F4</strong> (Comanda), <strong>F9</strong> (Finalizar).</span>
+    <span>💡 Dica: Use <strong>F2</strong> (Caixa), <strong>F4</strong> (Comandas), <strong>F8</strong> (Cozinha), <strong>F9</strong> (Estoque Mínimo).</span>
     <button onclick="showView('dashboard')">Ver resumo</button>
   </div>
 
@@ -121,10 +125,10 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13px}
     <div class="menu-group"><div class="menu-group-header" onclick="toggleGroup(this)">Estoque / WMS</div><div class="menu-items">
       <div class="menu-item" data-view="estoque" onclick="showView('estoque')">Estoque</div>
       <div class="menu-item" data-view="movimentos" onclick="showView('movimentos')">Movimentações</div>
-      <div class="menu-item" data-view="alertas-estoque" onclick="showView('alertas-estoque')">🚨 Alertas / Ponto de Pedido</div></div></div>
-    <div class="menu-group"><div class="menu-group-header" onclick="toggleGroup(this)">Operacional</div><div class="menu-items">
+      <div class="menu-item" data-view="alertas-estoque" onclick="showView('alertas-estoque')">🚨 Alertas Estoque Mínimo</div></div></div>
+    <div class="menu-group"><div class="menu-group-header" onclick="toggleGroup(this)">Operacional & Cozinha</div><div class="menu-items">
       <div class="menu-item" data-view="kds" onclick="showView('kds')">👨‍🍳 Cozinha (KDS)</div>
-      <div class="menu-item" data-view="integracoes" onclick="showView('integracoes')">⚙️ Configurar APIs</div></div></div>
+      <div class="menu-item" data-view="integracoes" onclick="showView('integracoes')">⚙️ Configurar APIs (Pix/NFe)</div></div></div>
     <div class="menu-group"><div class="menu-group-header" onclick="toggleGroup(this)">Financeiro</div><div class="menu-items">
       <div class="menu-item" data-view="contas" onclick="showView('contas')">Contas a Pagar/Receber</div>
       <div class="menu-item" data-view="tesouraria" onclick="showView('tesouraria')">Tesouraria</div>
@@ -133,14 +137,19 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13px}
     <div class="menu-group"><div class="menu-group-header" onclick="toggleGroup(this)">Contábil / Fiscal</div><div class="menu-items">
       <div class="menu-item" data-view="nf" onclick="showView('nf')">NF Entrada / Saída</div>
       <div class="menu-item" data-view="dre" onclick="showView('dre')">DRE + Simulador</div></div></div>
-    <div class="menu-group"><div class="menu-group-header" onclick="toggleGroup(this)">RH & Logística</div><div class="menu-items">
+    <div class="menu-group"><div class="menu-group-header" onclick="toggleGroup(this)">RH</div><div class="menu-items">
       <div class="menu-item" data-view="ponto" onclick="showView('ponto')">Ponto</div>
       <div class="menu-item" data-view="ferias" onclick="showView('ferias')">Férias</div>
-      <div class="menu-item" data-view="holerites" onclick="showView('holerites')">Holerites</div>
+      <div class="menu-item" data-view="holerites" onclick="showView('holerites')">Holerites</div></div></div>
+    <div class="menu-group"><div class="menu-group-header" onclick="toggleGroup(this)">Logística</div><div class="menu-items">
       <div class="menu-item" data-view="logistica" onclick="showView('logistica')">Entregas</div></div></div>
     <div class="menu-group"><div class="menu-group-header" onclick="toggleGroup(this)">Agenda e Arquivos</div><div class="menu-items">
       <div class="menu-item" data-view="agenda" onclick="showView('agenda')">Agenda</div>
       <div class="menu-item" data-view="arquivos" onclick="showView('arquivos')">Arquivos</div></div></div>
+    <div class="menu-group"><div class="menu-group-header" onclick="toggleGroup(this)">Inteligência Artificial</div><div class="menu-items">
+      <div class="menu-item" data-view="bot-config" onclick="showView('bot-config')">Grid 1: Config. do Bot</div>
+      <div class="menu-item" data-view="gerente" onclick="showView('gerente')">Grid 2: Gerente Ambiente</div>
+      <div class="menu-item" data-view="ia-vendas" onclick="showView('ia-vendas')">Grid 3: IA de Vendas</div></div></div>
   </aside>
 
   <main class="content" id="content"></main>
@@ -190,9 +199,9 @@ function showView(view){
     fornecedores:renderFornecedores, funcionarios:renderFuncionarios, vendas:renderVendas, comandas:renderComandas,
     'pedidos-site':renderPedidosSite, estoque:renderEstoque, movimentos:renderMovimentos, contas:renderContas, 
     tesouraria:renderTesouraria, autorizacoes:renderAutorizacoes, ponto:renderPonto, ferias:renderFerias, 
-    holerites:renderHolerites, logistica:renderLogistica, arquivos:renderArquivos, agenda:renderAgenda, 
-    bancos:renderBancos, nf:renderNF, dre:renderDRE, 'alertas-estoque':renderAlertasEstoque, 
-    kds:renderKDS, integracoes:renderIntegracoes
+    holerites:renderHolerites, logistica:renderLogistica, 'bot-config':renderBotConfig, gerente:renderGerente, 
+    'ia-vendas':renderIAVendas, arquivos:renderArquivos, agenda:renderAgenda, bancos:renderBancos, 
+    nf:renderNF, dre:renderDRE, 'alertas-estoque':renderAlertasEstoque, kds:renderKDS, integracoes:renderIntegracoes
   };
   (renderers[view]||renderDashboard)(); 
   lucide.createIcons();
@@ -203,8 +212,7 @@ function tabelaSimples(dados,colunas,acoes){
   return '<table class="data-table"><thead><tr>'+colunas.map(c=>'<th>'+c.titulo+'</th>').join('')+(acoes?'<th>Ações</th>':'')+'</tr></thead><tbody>'+dados.map(d=>'<tr>'+colunas.map(c=>'<td>'+(c.render?c.render(d):(d[c.chave]??'-'))+'</td>').join('')+(acoes?'<td>'+acoes(d)+'</td>':'')+'</tr>').join('')+'</tbody></table>'; 
 }
 
-// ===== NOVAS TELAS ADICIONADAS =====
-
+// ===== NOVAS TELAS (ESTOQUE MÍNIMO, KDS, INTEGRAÇÕES) =====
 async function renderAlertasEstoque(){
   const c=document.getElementById('content');
   c.innerHTML='<h1 class="page-title">🚨 Alertas de Estoque Mínimo</h1><p class="page-sub">Insumos e produtos que atingiram ou ficaram abaixo do limite mínimo.</p><div class="card" id="listaAlertas">Carregando...</div>';
@@ -328,9 +336,9 @@ async function salvarConfigIntegracao(){
   if(r.sucesso){ toast('Configuração salva com sucesso!'); } else { toast(r.erro || 'Erro ao salvar', 'error'); }
 }
 
-// ===== TELAS EXISTENTES MANTIDAS =====
-async function renderDashboard(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Visão Geral</h1><p class="page-sub">Resumo da padaria</p><div class="kpi-grid"><div class="kpi-card"><div><div class="kpi-label">Vendas Hoje</div><div class="kpi-value" id="kpiV">---</div></div></div><div class="kpi-card"><div><div class="kpi-label">Estoque Baixo</div><div class="kpi-value" id="kpiE">---</div></div></div></div><div class="card"><div class="card-title">Módulos Rápidos</div><div class="app-grid"><div class="app-tile" onclick="showView(\'caixa\')">PDV / Caixa</div><div class="app-tile" onclick="showView(\'kds\')">Cozinha (KDS)</div><div class="app-tile" onclick="showView(\'alertas-estoque\')">Alertas de Estoque</div><div class="app-tile" onclick="showView(\'integracoes\')">Configurar APIs</div></div></div>'; const r=await apiGET('/api/dashboard/resumo'); if(!r.erro){ document.getElementById('kpiV').textContent=fmt(r.vendas_hoje); document.getElementById('kpiE').textContent=r.estoque_baixo; } }
-async function renderCaixa(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Caixa / PDV</h1><p class="page-sub">Operação de balcão e comandas.</p><div class="card" id="cx">Carregando status do caixa...</div>'; const r=await apiGET('/api/caixa/status-online'); document.getElementById('cx').innerHTML='Caixas abertos: '+(r.caixas_abertos||[]).length+' - Saldo Atual: '+fmt(r.saldo_atual); }
+// ===== TELAS ORIGINAIS MANTIDAS INTEGRALMENTE =====
+async function renderDashboard(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Visão Geral</h1><p class="page-sub">Resumo da padaria</p><div class="kpi-grid"><div class="kpi-card"><div><div class="kpi-label">Vendas Hoje</div><div class="kpi-value" id="kpiV">---</div></div></div><div class="kpi-card"><div><div class="kpi-label">Estoque Baixo</div><div class="kpi-value" id="kpiE">---</div></div></div></div><div class="card"><div class="card-title">Módulos</div><div class="app-grid"><div class="app-tile" onclick="showView(\'caixa\')">PDV / Caixa</div><div class="app-tile" onclick="showView(\'kds\')">Cozinha (KDS)</div><div class="app-tile" onclick="showView(\'alertas-estoque\')">Alertas Estoque</div><div class="app-tile" onclick="showView(\'integracoes\')">Configurar APIs</div><div class="app-tile" onclick="showView(\'nf\')">NF Entrada/Saída</div><div class="app-tile" onclick="showView(\'dre\')">DRE</div><div class="app-tile" onclick="showView(\'bancos\')">Bancos</div><div class="app-tile" onclick="showView(\'agenda\')">Agenda</div></div></div>'; const r=await apiGET('/api/dashboard/resumo'); if(!r.erro){ document.getElementById('kpiV').textContent=fmt(r.vendas_hoje); document.getElementById('kpiE').textContent=r.estoque_baixo; } }
+async function renderCaixa(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Caixa / PDV</h1><p class="page-sub">Operação de balcão e comandas.</p><div class="card" id="cx">Carregando status...</div>'; const r=await apiGET('/api/caixa/status-online'); document.getElementById('cx').innerHTML='Caixas abertos: '+(r.caixas_abertos||[]).length+' - Saldo Atual: '+fmt(r.saldo_atual); }
 async function renderProdutos(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Produtos</h1><div class="card" id="t">Carregando...</div>'; const r=await apiGET('/api/produtos'); document.getElementById('t').innerHTML=tabelaSimples(r.produtos,[{chave:'nome',titulo:'Nome'},{chave:'preco_venda',titulo:'Preço',render:d=>fmt(d.preco_venda)}]); }
 async function renderClientes(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Clientes</h1><div class="card" id="t">Carregando...</div>'; const r=await apiGET('/api/clientes'); document.getElementById('t').innerHTML=tabelaSimples(r.clientes,[{chave:'nome',titulo:'Nome'},{chave:'telefone',titulo:'Tel'}]); }
 async function renderFornecedores(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Fornecedores</h1><div class="card" id="t">Carregando...</div>'; const r=await apiGET('/api/fornecedores'); document.getElementById('t').innerHTML=tabelaSimples(r.fornecedores,[{chave:'nome',titulo:'Nome'}]); }
@@ -347,19 +355,22 @@ async function renderPonto(){ const c=document.getElementById('content'); c.inne
 async function renderFerias(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Férias</h1><div class="card" id="t">Carregando...</div>'; const r=await apiGET('/api/rh/ferias'); document.getElementById('t').innerHTML=tabelaSimples(r.ferias,[{chave:'funcionario_matricula',titulo:'Matrícula'},{chave:'inicio',titulo:'Início'}]); }
 async function renderHolerites(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Holerites</h1><div class="card" id="t">Carregando...</div>'; const r=await apiGET('/api/rh/holerites'); document.getElementById('t').innerHTML=tabelaSimples(r.holerites,[{chave:'funcionario_matricula',titulo:'Matrícula'},{chave:'liquido',titulo:'Líquido',render:d=>fmt(d.liquido)}]); }
 async function renderLogistica(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Logística / Entregas</h1><div class="card" id="t">Carregando...</div>'; const r=await apiGET('/api/logistica/movimentos'); document.getElementById('t').innerHTML=tabelaSimples(r.movimentos,[{chave:'produto_nome',titulo:'Produto'},{chave:'destino',titulo:'Destino'}]); }
-async function renderArquivos(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Arquivos</h1><p class="page-sub">Fotos e registros.</p><div class="card" id="arqList">Carregando...</div>'; const r=await apiGET('/api/arquivos_lista'); document.getElementById('arqList').innerHTML=tabelaSimples(r.arquivos||[],[{chave:'categoria',titulo:'Categoria'},{chave:'nome',titulo:'Nome'}]); }
+async function renderBotConfig(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Configuração do Bot</h1><div class="card">Painel do Bot ativo</div>'; }
+async function renderGerente(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Gerente Ambiente</h1><div class="card" id="t">Carregando...</div>'; const r=await apiGET('/api/gerente/alertas'); document.getElementById('t').innerHTML=tabelaSimples(r.alertas,[{chave:'mensagem',titulo:'Alerta'}]); }
+async function renderIAVendas(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">IA de Vendas</h1><div class="card">Módulo de IA ativo</div>'; }
+async function renderArquivos(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Arquivos</h1><div class="card" id="arqList">Carregando...</div>'; const r=await apiGET('/api/arquivos_lista'); document.getElementById('arqList').innerHTML=tabelaSimples(r.arquivos||[],[{chave:'categoria',titulo:'Categoria'},{chave:'nome',titulo:'Nome'}]); }
 async function renderAgenda(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Agenda</h1><div class="card" id="agendaList">Carregando...</div>'; const r=await apiGET('/api/agenda_lista'); document.getElementById('agendaList').innerHTML=tabelaSimples(r.eventos||[],[{chave:'titulo',titulo:'Título'},{chave:'tipo',titulo:'Tipo'}]); }
-async function renderBancos(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Bancos e Contas</h1><div class="card" id="bancoContas">Carregando...</div>'; const r=await apiGET('/api/bancos/config'); document.getElementById('bancoContas').innerHTML=tabelaSimples(r.contas||[],[{chave:'banco',titulo:'Banco'},{chave:'ag_conta',titulo:'Conta'},{chave:'saldo',titulo:'Saldo',render:d=>fmt(d.saldo)}]); }
+async function renderBancos(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Bancos e Contas</h1><div class="card" id="bancoContas">Carregando...</div>'; const r=await apiGET('/api/bancos/config'); document.getElementById('bancoContas').innerHTML=tabelaSimples(r.contas||[],[{chave:'banco',titulo:'Banco'},{chave:'ag_conta',titulo:'Conta'}]); }
 async function renderNF(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Notas Fiscais</h1><div class="card" id="nfList">Carregando...</div>'; const r=await apiGET('/api/nf_lista'); document.getElementById('nfList').innerHTML=tabelaSimples(r.notas||[],[{chave:'tipo',titulo:'Tipo'},{chave:'numero',titulo:'Nº'},{chave:'total',titulo:'Total',render:d=>fmt(d.total)}]); }
 async function renderDRE(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">DRE Resumo</h1><div class="card" id="dreOut">Carregando...</div>'; const r=await apiGET('/api/dre_resumo'); document.getElementById('dreOut').innerHTML=`Receita: ${fmt(r.receita)} <br>Impostos: ${fmt(r.impostos)} <br><b>Lucro Líquido: ${fmt(r.lucro)}</b>`; }
 
 // ===== ATALHOS DE TECLADO GLOBAIS (PDV) =====
 document.addEventListener('keydown', function(event) {
     if(['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
-    if(event.key === 'F2') { event.preventDefault(); showView('caixa'); toast('Atalho F2: Caixa / Nova Venda'); }
+    if(event.key === 'F2') { event.preventDefault(); showView('caixa'); toast('Atalho F2: Caixa'); }
     if(event.key === 'F4') { event.preventDefault(); showView('comandas'); toast('Atalho F4: Comandas'); }
     if(event.key === 'F8') { event.preventDefault(); showView('kds'); toast('Atalho F8: Cozinha (KDS)'); }
-    if(event.key === 'F9') { event.preventDefault(); showView('alertas-estoque'); toast('Atalho F9: Alertas de Estoque'); }
+    if(event.key === 'F9') { event.preventDefault(); showView('alertas-estoque'); toast('Atalho F9: Alertas Estoque'); }
 });
 
 if(currentUser) showView('dashboard');
