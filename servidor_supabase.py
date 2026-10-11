@@ -1098,6 +1098,109 @@ def main():
     print(f" Login padrão: AP-2026-0001 / 123", flush=True)
     print(f"="*50, flush=True)
     servidor.serve_forever()
+# ===== NOVOS ENDPOINTS - NF / DRE / ARQUIVOS / AGENDA / BANCOS =====
+@app.route('/api/nf', methods=['GET'])
+def api_nf_list():
+    r = supabase.table('notas_fiscais').select('*').order('id', desc=True).limit(100).execute()
+    return jsonify(notas=r.data or [])
+
+@app.route('/api/nf/criar', methods=['POST'])
+def api_nf_criar():
+    d = request.json or {}
+    total = float(d.get('total') or 0)
+    icms = total*float(d.get('aliq_icms') or 0)/100
+    pis = total*float(d.get('aliq_pis') or 0)/100
+    cof = total*float(d.get('aliq_cofins') or 0)/100
+    iss = total*float(d.get('aliq_iss') or 0)/100
+    timp = icms+pis+cof+iss
+    ins = supabase.table('notas_fiscais').insert({
+        'tipo':d.get('tipo'),'numero':d.get('numero'),'pessoa':d.get('pessoa'),
+        'total':total,'total_impostos':timp,
+        'aliq_icms':d.get('aliq_icms'),'aliq_pis':d.get('aliq_pis'),
+        'aliq_cofins':d.get('aliq_cofins'),'aliq_iss':d.get('aliq_iss')
+    }).execute()
+    nid = (ins.data[0]['id'] if ins.data else 0)
+    supabase.table('lancamentos_contabeis').insert({'origem':'NF','referencia_id':nid,'descricao':f"NF {d.get('tipo')} {d.get('numero')} - {d.get('pessoa')}",'valor':total,'tipo':d.get('tipo')}).execute()
+    return jsonify(sucesso=True, numero=d.get('numero'), impostos=timp)
+
+@app.route('/api/dre', methods=['GET'])
+def api_dre():
+    comp = request.args.get('comp','')
+    nfs = supabase.table('notas_fiscais').select('*').execute().data or []
+    # filtra pelo mês se vier comp=2026-10
+    rec = sum(float(n.get('total') or 0) for n in nfs if n.get('tipo')=='SAIDA')
+    imp = sum(float(n.get('total_impostos') or 0) for n in nfs if n.get('tipo')=='SAIDA')
+    cus = sum(float(n.get('total') or 0) for n in nfs if n.get('tipo')=='ENTRADA')
+    liq = rec-imp
+    return jsonify(receita=rec, impostos=imp, liq=liq, custos=cus, lucro=liq-cus)
+
+@app.route('/api/dre/simular', methods=['POST'])
+def api_simular():
+    d = request.json or {}
+    fat = float(d.get('faturamento') or 0); cus = float(d.get('custo') or 0)
+    reg = (d.get('regime') or 'SIMPLES').upper()
+    if reg=='SIMPLES':
+        pis=fat*0.0065; cof=fat*0.03; icms=fat*0.034; iss=fat*0.02
+    elif reg=='PRESUMIDO':
+        pis=fat*0.0065; cof=fat*0.03; icms=fat*float(d.get('aliq_icms') or 18)/100*0.3; iss=fat*float(d.get('aliq_iss') or 5)/100*0.32
+    else:
+        pis=fat*0.0165; cof=fat*0.076; icms=fat*float(d.get('aliq_icms') or 18)/100; iss=fat*float(d.get('aliq_iss') or 5)/100*0.1
+    lucro = fat-(pis+cof+icms+iss)-cus
+    return jsonify(pis=pis, cofins=cof, icms=icms, iss=iss, lucro=lucro)
+
+@app.route('/api/arquivos', methods=['GET'])
+def api_arq():
+    r = supabase.table('arquivos').select('*').order('id', desc=True).limit(100).execute()
+    return jsonify(arquivos=r.data or [])
+
+@app.route('/api/arquivos/upload', methods=['POST'])
+def api_arq_up():
+    f = request.files.get('file')
+    cat = request.form.get('categoria'); ref = request.form.get('referencia')
+    nome = f.filename if f else 'sem-nome'
+    # salva no storage bucket arquivos
+    if f:
+        supabase.storage.from_('arquivos').upload(nome, f.read(), {'content-type': f.content_type, 'upsert':'true'})
+        url = supabase.storage.from_('arquivos').get_public_url(nome)
+    else:
+        url = ''
+    supabase.table('arquivos').insert({'categoria':cat,'referencia':ref,'nome':nome,'url':url}).execute()
+    return jsonify(sucesso=True)
+
+@app.route('/api/agenda', methods=['GET'])
+def api_ag():
+    ano = request.args.get('ano'); mes = request.args.get('mes')
+    r = supabase.table('eventos_agenda').select('*').order('inicio').limit(200).execute()
+    evs = r.data or []
+    if ano and mes:
+        evs = [e for e in evs if e.get('inicio','').startswith(f"{ano}-{str(mes).zfill(2)}")]
+    return jsonify(eventos=evs)
+
+@app.route('/api/agenda/criar', methods=['POST'])
+def api_ag_criar():
+    d = request.json or {}
+    supabase.table('eventos_agenda').insert({'titulo':d.get('titulo'),'inicio':d.get('inicio'),'fim':d.get('fim'),'tipo':d.get('tipo'),'responsavel':d.get('usuario',{}).get('matricula')}).execute()
+    return jsonify(sucesso=True)
+
+@app.route('/api/bancos', methods=['GET'])
+def api_bancos():
+    c = supabase.table('contas_bancarias').select('*').execute().data or []
+    m = supabase.table('maquininhas').select('*').execute().data or []
+    i = supabase.table('repasses_ifood').select('*').execute().data or []
+    return jsonify(contas=c, maquininhas=m, ifood=i)
+
+@app.route('/api/bancos/conta', methods=['POST'])
+def api_bc():
+    d=request.json or {}; supabase.table('contas_bancarias').insert({'banco':d.get('banco'),'ag_conta':d.get('ag_conta')}).execute(); return jsonify(sucesso=True)
+
+@app.route('/api/bancos/maquininha', methods=['POST'])
+def api_mq():
+    d=request.json or {}; supabase.table('maquininhas').insert({'operadora':d.get('operadora'),'taxa':d.get('taxa')}).execute(); return jsonify(sucesso=True)
+
+@app.route('/api/bancos/ifood', methods=['POST'])
+def api_if():
+    d=request.json or {}; b=float(d.get('bruto') or 0); t=float(d.get('taxa') or 0)
+    supabase.table('repasses_ifood').insert({'periodo':d.get('periodo'),'bruto':b,'taxa':t,'liquido':b-t}).execute(); return jsonify(sucesso=True)
 
 if __name__ == "__main__":
     main()
