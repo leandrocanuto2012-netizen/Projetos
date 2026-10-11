@@ -216,6 +216,18 @@ def garantir_schema():
         else:
             cur.execute("INSERT INTO funcionarios (matricula,nome,cargo,role,senha_hash,permissoes,status) VALUES (%s,%s,%s,%s,%s,%s,'ATIVO')",
                 ("AP-2026-0001","Administrador","Gerente Geral","admin",hash_senha("123"),json.dumps(MODULOS_PADRAO)))
+            cur.execute("""CREATE TABLE IF NOT EXISTS contas_bancarias (id SERIAL PRIMARY KEY, banco TEXT, ag_conta TEXT, provedor TEXT DEFAULT 'MANUAL', item_id TEXT, saldo NUMERIC DEFAULT 0, ultimo_sync TIMESTAMP, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
+            cur.execute("""CREATE TABLE IF NOT EXISTS integracoes_config (id SERIAL PRIMARY KEY, tipo TEXT UNIQUE, provedor TEXT, api_key TEXT, client_id TEXT, client_secret TEXT, config_extra TEXT, ativo BOOLEAN DEFAULT FALSE, ultimo_sync TIMESTAMP, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
+            cur.execute("""CREATE TABLE IF NOT EXISTS maquininhas (id SERIAL PRIMARY KEY, operadora TEXT, taxa NUMERIC DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
+            cur.execute("""CREATE TABLE IF NOT EXISTS repasses_ifood (id SERIAL PRIMARY KEY, periodo TEXT, bruto NUMERIC DEFAULT 0, taxa NUMERIC DEFAULT 0, liquido NUMERIC DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
+            cur.execute("""CREATE TABLE IF NOT EXISTS boletos (id SERIAL PRIMARY KEY, conta_id INT, nosso_numero TEXT, link TEXT, linha_digitavel TEXT, valor NUMERIC DEFAULT 0, vencimento DATE, status TEXT DEFAULT 'EMITIDO', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
+            cur.execute("""CREATE TABLE IF NOT EXISTS notas_fiscais (id SERIAL PRIMARY KEY, tipo TEXT, numero TEXT, pessoa TEXT, total NUMERIC DEFAULT 0, total_impostos NUMERIC DEFAULT 0, aliq_icms NUMERIC DEFAULT 0, aliq_pis NUMERIC DEFAULT 0, aliq_cofins NUMERIC DEFAULT 0, aliq_iss NUMERIC DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
+            cur.execute("""CREATE TABLE IF NOT EXISTS lancamentos_contabeis (id SERIAL PRIMARY KEY, origem TEXT, referencia_id INT, descricao TEXT, valor NUMERIC DEFAULT 0, tipo TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
+            cur.execute("""CREATE TABLE IF NOT EXISTS arquivos (id SERIAL PRIMARY KEY, categoria TEXT, referencia TEXT, nome TEXT, url TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
+            cur.execute("""CREATE TABLE IF NOT EXISTS eventos_agenda (id SERIAL PRIMARY KEY, titulo TEXT, inicio TIMESTAMP, fim TIMESTAMP, tipo TEXT, responsavel TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
+            cur.execute("""CREATE TABLE IF NOT EXISTS ponto_registros (id SERIAL PRIMARY KEY, funcionario_matricula TEXT, data DATE, entrada TIME, saida TIME, pausa_min NUMERIC DEFAULT 60, horas_trabalhadas NUMERIC DEFAULT 8, horas_extras NUMERIC DEFAULT 0, status TEXT DEFAULT 'ATIVO', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
+            cur.execute("""CREATE TABLE IF NOT EXISTS ponto_ajustes (id SERIAL PRIMARY KEY, ponto_id INT, funcionario_matricula TEXT, data_ref DATE, campo TEXT, valor_antigo TEXT, valor_novo TEXT, motivo TEXT, status TEXT DEFAULT 'PENDENTE', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
+            cur.execute("""CREATE TABLE IF NOT EXISTS atestados (id SERIAL PRIMARY KEY, funcionario_matricula TEXT, data DATE, dias NUMERIC DEFAULT 1, motivo TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
         conn.commit()
     print("Schema verificado no Supabase.", flush=True)
 
