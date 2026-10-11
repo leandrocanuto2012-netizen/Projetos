@@ -1,505 +1,542 @@
 <!DOCTYPE html>
- <html lang="pt-BR">
- <head>
- <meta charset="UTF-8">
- <meta name="viewport" content="width=device-width, initial-scale=1.0">
- <title>Panificadora ERP - Gestão Completa</title>
- <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
- <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
- <script src="https://cdn.jsdelivr.net/npm/lucide@1/dist/umd/lucide.min.js"></script>
- <style>
- :root{
- --bg:#f1f5f9; --card:#fff; --text:#0f172a; --muted:#64748b;
- --accent:#16a34a; --accent-dark:#15803d; --accent-soft:#dcfce7;
- --accent2:#f59e0b; --danger:#dc2626; --danger-soft:#fee2e2;
- --border:#e2e8f0; --header:#1e293b; --sidebar:#fff; --sidebar-hover:#f1f5f9;
- --shadow:0 1px 3px rgba(0,0,0,.06);
- }
- *{margin:0;padding:0;box-sizing:border-box;font-family:'Quicksand',sans-serif}
- body{background:var(--bg);color:var(--text);font-size:14px}
- .hidden{display:none!important}
- #loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%)}
- .login-box{background:#fff;padding:40px;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.3);width:380px;max-width:90vw}
- .login-box h1{font-size:28px;font-weight:700;color:var(--accent-dark);margin-bottom:4px}
- .login-box p{color:var(--muted);margin-bottom:24px;font-size:14px}
- .login-box label{display:block;font-weight:600;margin:12px 0 6px;font-size:13px;color:var(--text)}
- .login-box input{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:8px;font-size:14px;outline:none}
- .login-box button{width:100%;margin-top:20px;padding:13px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer}
- .login-error{color:var(--danger);font-size:13px;margin-top:10px;min-height:18px}
- .login-hint{margin-top:16px;font-size:12px;color:var(--muted);text-align:center;background:var(--accent-soft);padding:8px;border-radius:6px}
- #app{display:flex;min-height:100vh}
- header.topbar{position:fixed;top:0;left:0;right:0;height:52px;background:var(--header);display:flex;align-items:center;padding:0 16px;z-index:100;gap:12px}
- .logo{color:#fff;font-weight:700;font-size:18px;display:flex;align-items:center;gap:8px}
- .logo span{color:var(--accent)}
- .topbar .spacer{flex:1}
- .top-icon{color:#cbd5e1;cursor:pointer;padding:6px;border-radius:6px;display:flex;align-items:center}
- .top-icon:hover{background:rgba(255,255,255,.1);color:#fff}
- .user-avatar{width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;cursor:pointer}
- .banner{background:#fef3c7;padding:8px 20px;font-size:13px;color:#92400e;display:flex;align-items:center;gap:12px;position:fixed;top:52px;left:0;right:0;z-index:99}
- .banner button{background:var(--accent);color:#fff;border:none;padding:5px 14px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer}
- aside.sidebar{position:fixed;top:52px;left:0;bottom:0;width:240px;background:var(--sidebar);border-right:1px solid var(--border);overflow-y:auto;padding:8px 0;z-index:90}
- .menu-group-header{display:flex;align-items:center;gap:8px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer}
- .menu-group.collapsed .menu-items{display:none}
- .menu-item{display:flex;align-items:center;gap:10px;padding:8px 16px 8px 42px;font-size:13px;color:var(--muted);cursor:pointer}
- .menu-item:hover{background:var(--sidebar-hover);color:var(--text)}
- .menu-item.active{background:var(--accent-soft);color:var(--accent-dark);font-weight:700;border-right:3px solid var(--accent)}
- main.content{margin-left:240px;margin-top:52px;padding:24px;flex:1;min-width:0}
- .page-title{font-size:22px;font-weight:700;margin-bottom:4px}
- .page-sub{color:var(--muted);font-size:14px;margin-bottom:20px}
- .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:20px}
- .kpi-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;display:flex;gap:12px;align-items:flex-start}
- .kpi-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center}
- .kpi-label{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase}
- .kpi-value{font-size:22px;font-weight:700;margin-top:2px}
- .kpi-sub{font-size:12px;color:var(--muted);margin-top:2px}
- .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:16px}
- .card-title{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:16px}
- .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
- table.data-table{width:100%;border-collapse:collapse;font-size:13px}
- .data-table th{text-align:left;padding:10px 12px;border-bottom:2px solid var(--border);color:var(--muted);font-size:12px;text-transform:uppercase}
- .data-table td{padding:10px 12px;border-bottom:1px solid var(--border)}
- .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
- .badge.ok{background:var(--accent-soft);color:var(--accent-dark)}
- .badge.warn{background:#fef3c7;color:#92400e}
- .badge.danger{background:var(--danger-soft);color:var(--danger)}
- .badge.info{background:#dbeafe;color:#1e40af}
- .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
- .form-group{display:flex;flex-direction:column;gap:4px}
- .form-group label{font-size:12px;font-weight:700}
- .form-group input,.form-group select,.form-group textarea{padding:9px 12px;border:1px solid var(--border);border-radius:7px;font-size:13px}
- .btn{padding:9px 18px;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;border:none;display:inline-flex;align-items:center;gap:6px}
- .btn-primary{background:var(--accent);color:#fff}
- .btn-secondary{background:#fff;color:var(--text);border:1px solid var(--border)}
- .btn-danger{background:var(--danger);color:#fff}
- .btn-sm{padding:5px 10px;font-size:12px}
- .btn-block{width:100%;justify-content:center}
- .form-actions{display:flex;gap:8px;margin-top:14px;justify-content:flex-end}
- .alert-item{display:flex;align-items:center;gap:12px;padding:12px;border-radius:8px;margin-bottom:8px;border:1px solid var(--border)}
- .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px}
- .modal{background:#fff;border-radius:12px;padding:24px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto}
- .empty-state{text-align:center;padding:40px 20px;color:var(--muted)}
- .toast{position:fixed;bottom:20px;right:20px;background:var(--text);color:#fff;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:600;z-index:300}
- .toast.success{background:var(--accent)}
- .toast.error{background:var(--danger)}
- .app-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
- .app-tile{display:flex;gap:12px;padding:14px;border:1px solid var(--border);border-radius:10px;cursor:pointer;align-items:flex-start}
- .chart-container{width:100%;height:300px}
- .hint-bar{background:#e0f2fe;border-left:4px solid #0284c7;padding:8px 12px;margin-bottom:16px;font-size:12px;color:#075985;border-radius:4px}
- .kds-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:15px}
- .kds-card{background:#2b2d42;border-radius:8px;border-left:6px solid #e74c3c;padding:15px;color:#fff}
- .kds-card.preparo{border-left-color:#f1c40f}
- .kds-card.pronto{border-left-color:#27ae60}
- .kds-header{display:flex;justify-content:space-between;font-weight:bold;border-bottom:1px solid #444;padding-bottom:8px;margin-bottom:10px}
- .kds-btn{width:100%;padding:10px;border:none;border-radius:5px;background:#27ae60;color:#fff;font-weight:bold;cursor:pointer;font-size:14px}
- .kds-btn:hover{background:#219150}
- .key-hint{position:fixed;bottom:16px;left:16px;background:rgba(15,23,42,.9);color:#fff;padding:10px 14px;border-radius:8px;font-size:12px;z-index:500;max-width:400px}
- .key-hint kbd{background:#334155;padding:2px 6px;border-radius:3px;font-family:monospace;margin:0 2px}
- .qr-code-box{text-align:center;padding:20px;border:1px solid var(--border);border-radius:8px}
- </style>
- </head>
- <body>
- <div id="loginScreen">
- <div class="login-box">
- <h1>Panificadora <span style="color:var(--accent)">ERP</span></h1>
- <p>Gestão completa da sua padaria</p>
- <label>Matrícula</label>
- <input type="text" id="loginMatricula" placeholder="AP-2026-0001" value="AP-2026-0001">
- <label>Senha</label>
- <input type="password" id="loginSenha" placeholder="•••" value="123">
- <button onclick="fazerLogin()">Entrar</button>
- <div class="login-error" id="loginError"></div>
- <div class="login-hint">Padrão: AP-2026-0001 / 123</div>
- </div>
- </div>
- <div id="app" class="hidden">
- <header class="topbar">
- <div class="top-icon" onclick="toggleSidebar()"><i data-lucide="menu"></i></div>
- <div class="logo">Panificadora<span>ERP</span></div>
- <div class="spacer"></div>
- <div class="top-icon" onclick="showView('dashboard')" title="Início"><i data-lucide="layout-grid"></i></div>
- <div class="top-icon" onclick="window.open('/site','_blank')" title="Ver Site Público"><i data-lucide="globe"></i></div>
- <div class="top-icon" onclick="showView('ia-vendas')" title="IA de Vendas"><i data-lucide="sparkles"></i></div>
- <div class="top-icon" onclick="showView('integracoes')" title="Integrações"><i data-lucide="settings"></i></div>
- <div class="top-icon" onclick="showView('kds')" title="Cozinha"><i data-lucide="chef-hat"></i></div>
- <div class="top-icon" onclick="showView('alertas-estoque')" title="Estoque Baixo"><i data-lucide="alert-triangle"></i></div>
- <div class="user-avatar" onclick="fazerLogout()" title="Sair">AD</div>
- </header>
- <div class="banner"><span>Sistema em funcionamento — conectado ao banco de dados.</span><button onclick="showView('dashboard')">Ver resumo</button></div>
- <aside class="sidebar" id="sidebar">
- <div class="menu-group"><div class="menu-group-header" onclick="toggleGroup(this)">Dashboard</div><div class="menu-items">
- <div class="menu-item active" data-view="dashboard" onclick="showView('dashboard')">Visão Geral</div>
- <div class="menu-item" data-view="caixa" onclick="showView('caixa')">Caixa / PDV</div></div></div>
- <div class="menu-group"><div class="menu-group-header" onclick="toggleGroup(this)">Cadastros</div><div class="menu-items">
- <div class="menu-item" data-view="produtos" onclick="showView('produtos')">Produtos</div>
- <div class="menu-item" data-view="clientes" onclick="showView('clientes')">Clientes</div>
- <div class="menu-item" data-view="fornecedores" onclick="showView('fornecedores')">Fornecedores</div>
- <div class="menu-item" data-view="funcionarios" onclick="showView('funcionarios')">Funcionários</div></div></div>
- <div class="menu-group"><div class="menu-group-header" onclick="toggleGroup(this)">Vendas</div><div class="menu-items">
- <div class="menu-item" data-view="vendas" onclick="showView('vendas')">Vendas</div>
- <div class="menu-item" data-view="comandas" onclick="showView('comandas')">Comandas</div>
- <div class="menu-item" data-view="pedidos-site" onclick="showView('pedidos-site')">Pedidos do Site</div>
- <div class="menu-item" data-view="pagamentos" onclick="showView('pagamentos')">Pagamentos / PIX</div></div></div>
- <div class="menu-group"><div class="menu-group-header" onclick="toggleGroup(this)">Estoque / WMS</div><div class="menu-items">
- <div class="menu-item" data-view="estoque" onclick="showView('estoque')">Estoque</div>
- <div class="menu-item" data-view="movimentos" onclick="showView('movimentos')">Movimentações</div>
- <div class="menu-item" data-view="alertas-estoque" onclick="showView('alertas-estoque')">⚠️ Alertas de Estoque</div>
- <div class="menu-item" data-view="kds" onclick="showView('kds')">🍳 Painel Cozinha</div></div></div>
- <div class="menu-group"><div class="menu-group-header" onclick="toggleGroup(this)">Financeiro</div><div class="menu-items">
- <div class="menu-item" data-view="contas" onclick="showView('contas')">Contas a Pagar/Receber</div>
- <div class="menu-item" data-view="tesouraria" onclick="showView('tesouraria')">Tesouraria</div>
- <div class="menu-item" data-view="bancos" onclick="showView('bancos')">Vincular Bancos</div>
- <div class="menu-item" data-view="autorizacoes" onclick="showView('autorizacoes')">Autorizações</div></div></div>
- <div class="menu-group"><div class="menu-group-header" onclick="toggleGroup(this)">Contábil / Fiscal</div><div class="menu-items">
- <div class="menu-item" data-view="nf" onclick="showView('nf')">NF Entrada / Saída</div>
- <div class="menu-item" data-view="nfce" onclick="showView('nfce')">NFC-e / Cupom Fiscal</div>
- <div class="menu-item" data-view="dre" onclick="showView('dre')">DRE + Simulador</div></div></div>
- <div class="menu-group"><div class="menu-group-header" onclick="toggleGroup(this)">RH</div><div class="menu-items">
- <div class="menu-item" data-view="ponto" onclick="showView('ponto')">Ponto</div>
- <div class="menu-item" data-view="ferias" onclick="showView('ferias')">Férias</div>
- <div class="menu-item" data-view="holerites" onclick="showView('holerites')">Holerites</div></div></div>
- <div class="menu-group"><div class="menu-group-header" onclick="toggleGroup(this)">Configurações</div><div class="menu-items">
- <div class="menu-item" data-view="integracoes" onclick="showView('integracoes')">🔌 Integrações</div>
- <div class="menu-item" data-view="agenda" onclick="showView('agenda')">Agenda</div>
- <div class="menu-item" data-view="arquivos" onclick="showView('arquivos')">Arquivos</div></div></div>
- </aside>
- <main class="content" id="content"></main>
- </div>
- <div id="modalContainer"></div>
- <div id="toastContainer"></div>
- <div class="key-hint" id="keyHint">
- <strong>Atalhos do Sistema:</strong>
- <kbd>F2</kbd> Nova Venda
- <kbd>F4</kbd> Comandas
- <kbd>F8</kbd> Pagamento
- <kbd>F9</kbd> Finalizar
- <kbd>ESC</kbd> Cancelar
- </div>
- <script>
- const API_BASE = window.location.origin;
- let currentUser = JSON.parse(localStorage.getItem('erp_user') || 'null');
- let currentView = 'dashboard';
- async function apiGET(path){
-   try{
-     const r=await fetch(API_BASE+path);
-     return await r.json();
-   }catch(e){
-     console.error('Erro na requisição:', e);
-     return {erro:'Servidor offline'};
-   }
- }
- async function apiPOST(path,data){
-   try{
-     const r=await fetch(API_BASE+path,{
-       method:'POST',
-       headers:{'Content-Type':'application/json'},
-       body:JSON.stringify(data||{})
-     });
-     return await r.json();
-   }catch(e){
-     console.error('Erro na requisição:', e);
-     return {erro:'Servidor offline'};
-   }
- }
- function toast(msg,tipo='success'){
-   const t=document.createElement('div');
-   t.className='toast '+tipo;
-   t.textContent=msg;
-   document.getElementById('toastContainer').appendChild(t);
-   setTimeout(()=>t.remove(),3000);
- }
- function fmt(v){
-   return 'R$ '+(parseFloat(v||0)).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
- }
- function userPayload(){
-   return {
-     usuario: {
-       matricula: currentUser ? currentUser.matricula : 'AP-2026-0001'
-     }
-   };
- }
- async function fazerLogin(){
-   const mat=document.getElementById('loginMatricula').value;
-   const senha=document.getElementById('loginSenha').value;
-   
-   if(mat==='AP-2026-0001' && senha==='123'){
-     currentUser={matricula:mat,nome:'Administrador'};
-     localStorage.setItem('erp_user',JSON.stringify(currentUser));
-     document.getElementById('loginScreen').classList.add('hidden');
-     document.getElementById('app').classList.remove('hidden');
-     showView('dashboard');
-     lucide.createIcons();
-   }else{
-     document.getElementById('loginError').textContent='Matrícula ou senha inválida';
-   }
- }
- function fazerLogout(){
-   localStorage.removeItem('erp_user');
-   currentUser=null;
-   location.reload();
- }
- if(currentUser){
-   document.getElementById('loginScreen').classList.add('hidden');
-   document.getElementById('app').classList.remove('hidden');
- }
- function toggleGroup(el){
-   el.parentElement.classList.toggle('collapsed');
- }
- function toggleSidebar(){
-   document.getElementById('sidebar').classList.toggle('hidden');
- }
- // ===== ATALHOS DE TECLADO =====
- document.addEventListener('keydown', function(event) {
-   const emInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName);
-   if(emInput && event.key!=='Escape') return;
-   switch(event.key) {
-     case 'F2':
-       event.preventDefault();
-       toast('F2 - Nova Venda');
-       showView('caixa');
-       break;
-     case 'F4':
-       event.preventDefault();
-       toast('F4 - Abrir Comandas');
-       showView('comandas');
-       break;
-     case 'F8':
-       event.preventDefault();
-       toast('F8 - Pagamentos');
-       showView('pagamentos');
-       break;
-     case 'F9':
-       event.preventDefault();
-       toast('F9 - Finalizar Venda');
-       break;
-     case 'Escape':
-       document.querySelectorAll('.modal-overlay').forEach(m=>m.remove());
-       break;
-   }
- });
- function showView(view){
-   currentView=view;
-   document.querySelectorAll('.menu-item').forEach(m=>{
-     m.classList.toggle('active',m.dataset.view===view);
-   });
-   
-   const renderers={
-     dashboard:renderDashboard,
-     caixa:renderCaixa,
-     produtos:renderProdutos,
-     clientes:renderClientes,
-     fornecedores:renderFornecedores,
-     funcionarios:renderFuncionarios,
-     vendas:renderVendas,
-     comandas:renderComandas,
-     'pedidos-site':renderPedidosSite,
-     estoque:renderEstoque,
-     movimentos:renderMovimentos,
-     contas:renderContas,
-     tesouraria:renderTesouraria,
-     autorizacoes:renderAutorizacoes,
-     ponto:renderPonto,
-     ferias:renderFerias,
-     holerites:renderHolerites,
-     'bot-config':renderBotConfig,
-     gerente:renderGerente,
-     'ia-vendas':renderIAVendas,
-     arquivos:renderArquivos,
-     agenda:renderAgenda,
-     bancos:renderBancos,
-     nf:renderNF,
-     nfce:renderNFCE,
-     dre:renderDRE,
-     integracoes:renderIntegracoes,
-     'alertas-estoque':renderAlertasEstoque,
-     kds:renderKDS,
-     pagamentos:renderPagamentos
-   };
-   
-   const renderer=renderers[view]||renderDashboard;
-   renderer();
-   lucide.createIcons();
- }
- function tabelaSimples(dados,colunas,acoes){
-   if(!dados||!dados.length){
-     return '<div class="empty-state"><p>Nenhum registro encontrado</p></div>';
-   }
-   return '<table class="data-table"><thead><tr>'+
-     colunas.map(c=>'<th>'+c.titulo+'</th>').join('')+
-     (acoes?'<th>Ações</th>':'')+'</tr></thead><tbody>'+
-     dados.map(d=>'<tr>'+
-       colunas.map(c=>'<td>'+(c.render?c.render(d):(d[c.chave]??'-'))+'</td>').join('')+
-       (acoes?'<td>'+acoes(d)+'</td>':'')+'</tr>').join('')+
-     '</tbody></table>';
- }
- // ===== DASHBOARD =====
- async function renderDashboard(){
-   const c=document.getElementById('content');
-   c.innerHTML=`
-     <h1 class="page-title">Visão Geral</h1>
-     <p class="page-sub">Resumo da sua panificadora</p>
-     
-     <div class="kpi-grid">
-       <div class="kpi-card">
-         <div>
-           <div class="kpi-label">Vendas Hoje</div>
-           <div class="kpi-value">${fmt(0)}</div>
-         </div>
-       </div>
-       <div class="kpi-card">
-         <div>
-           <div class="kpi-label">Produtos</div>
-           <div class="kpi-value">0</div>
-         </div>
-       </div>
-       <div class="kpi-card">
-         <div>
-           <div class="kpi-label">Pedidos Pendentes</div>
-           <div class="kpi-value">0</div>
-         </div>
-       </div>
-       <div class="kpi-card">
-         <div>
-           <div class="kpi-label">Estoque Baixo</div>
-           <div class="kpi-value">0</div>
-         </div>
-       </div>
-     </div>
-     <div class="card">
-       <div class="card-title">Acesso Rápido</div>
-       <div class="app-grid">
-         <div class="app-tile" onclick="showView('caixa')">
-           <i data-lucide="cash-register"></i>
-           <div><strong>PDV / Caixa</strong><br>Registrar vendas</div>
-         </div>
-         <div class="app-tile" onclick="showView('produtos')">
-           <i data-lucide="package"></i>
-           <div><strong>Produtos</strong><br>Cadastrar produtos</div>
-         </div>
-         <div class="app-tile" onclick="showView('kds')">
-           <i data-lucide="chef-hat"></i>
-           <div><strong>Cozinha</strong><br>Acompanhar pedidos</div>
-         </div>
-         <div class="app-tile" onclick="showView('alertas-estoque')">
-           <i data-lucide="alert-triangle"></i>
-           <div><strong>Estoque</strong><br>Verificar níveis</div>
-         </div>
-         <div class="app-tile" onclick="showView('pedidos-site')">
-           <i data-lucide="shopping-bag"></i>
-           <div><strong>Pedidos Site</strong><br>Pedidos online</div>
-         </div>
-         <div class="app-tile" onclick="showView('integracoes')">
-           <i data-lucide="settings"></i>
-           <div><strong>Integrações</strong><br>APIs e Tokens</div>
-         </div>
-       </div>
-     </div>
-   `;
- }
- async function renderCaixa(){
-   const c=document.getElementById('content');
-   c.innerHTML=`
-     <h1 class="page-title">Caixa / PDV</h1>
-     <p class="page-sub">Use <kbd style="background:#eee;padding:2px 6px;border-radius:3px">F2</kbd> Nova Venda | <kbd style="background:#eee;padding:2px 6px;border-radius:3px">F9</kbd> Finalizar</p>
-     <div class="card">
-       <div class="grid-2">
-         <div><strong>Status:</strong> Caixa fechado</div>
-         <div><strong>Operador:</strong> ${currentUser?.nome || 'ADMIN'}</div>
-         <div><strong>Saldo Inicial:</strong> ${fmt(0)}</div>
-         <div><strong>Saldo Atual:</strong> ${fmt(0)}</div>
-       </div>
-       <br>
-       <button class="btn btn-primary" onclick="toast('Caixa aberto!','success')">Abrir Caixa</button>
-     </div>
-   `;
- }
- async function renderProdutos(){
-   const c=document.getElementById('content');
-   c.innerHTML='<h1 class="page-title">Produtos</h1><div class="card">Lista de produtos aparecerá aqui</div>';
- }
- async function renderClientes(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Clientes</h1><div class="card">Lista de clientes</div>'; }
- async function renderFornecedores(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Fornecedores</h1><div class="card">Lista de fornecedores</div>'; }
- async function renderFuncionarios(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Funcionários</h1><div class="card">Lista de funcionários</div>'; }
- async function renderVendas(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Vendas</h1><div class="card">Histórico de vendas</div>'; }
- async function renderComandas(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Comandas</h1><div class="card">Comandas em uso</div>'; }
- async function renderPedidosSite(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Pedidos do Site</h1><div class="card">Pedidos recebidos online</div>'; }
- async function renderEstoque(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Estoque</h1><div class="card">Controle de estoque</div>'; }
- async function renderMovimentos(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Movimentações</h1><div class="card">Histórico de movimentações</div>'; }
- async function renderContas(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Contas a Pagar/Receber</h1><div class="card">Contas</div>'; }
- async function renderTesouraria(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Tesouraria</h1><div class="card">Saldo e movimentações financeiras</div>'; }
- async function renderAutorizacoes(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Autorizações</h1><div class="card">Aguardando autorização</div>'; }
- async function renderPonto(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Ponto</h1><div class="card">Registro de ponto</div>'; }
- async function renderFerias(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Férias</h1><div class="card">Controle de férias</div>'; }
- async function renderHolerites(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Holerites</h1><div class="card">Holerites</div>'; }
- async function renderBotConfig(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Configuração do Bot</h1><div class="card">Configurações do WhatsApp</div>'; }
- async function renderGerente(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Gerente Ambiente</h1><div class="card">Painel do gerente</div>'; }
- async function renderIAVendas(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">IA de Vendas</h1><div class="card">Assistente de vendas</div>'; }
- async function renderArquivos(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Arquivos</h1><div class="card">Upload e gerenciamento de arquivos</div>'; }
- async function renderAgenda(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Agenda</h1><div class="card">Calendário e compromissos</div>'; }
- async function renderBancos(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Bancos</h1><div class="card">Contas bancárias</div>'; }
- async function renderNF(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Notas Fiscais</h1><div class="card">Notas fiscais de entrada e saída</div>'; }
- async function renderNFCE(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">NFC-e</h1><div class="card">Emissão de cupom fiscal</div>'; }
- async function renderDRE(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">DRE</h1><div class="card">Demonstrativo de resultado</div>'; }
- async function renderPagamentos(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Pagamentos</h1><div class="card">Métodos de pagamento e PIX</div>'; }
- // ===== ALERTAS DE ESTOQUE =====
- async function renderAlertasEstoque(){
-   const c=document.getElementById('content');
-   c.innerHTML=`
-     <h1 class="page-title">⚠️ Alertas de Estoque Mínimo</h1>
-     <p class="page-sub">Produtos abaixo do nível recomendado</p>
-     <div class="hint-bar">🔔 Verifique semanalmente para não faltar produtos!</div>
-     <div class="card">
-       <div class="empty-state">
-         <i data-lucide="check-circle" style="width:48px;height:48px;color:var(--accent)"></i>
-         <p>Tudo em ordem! Nenhum produto com estoque baixo.</p>
-       </div>
-     </div>
-   `;
- }
- // ===== PAINEL DA COZINHA (KDS) =====
- async function renderKDS(){
-   const c=document.getElementById('content');
-   c.innerHTML=`
-     <h1 class="page-title">🍳 Painel de Produção — KDS</h1>
-     <p class="page-sub">Pedidos em tempo real</p>
-     <div class="card">
-       <div class="kds-grid">
-         <div class="empty-state" style="grid-column:1/-1">
-           <i data-lucide="check-circle" style="width:48px;height:48px;color:var(--accent)"></i>
-           <p>Nenhum pedido pendente. Tudo em ordem!</p>
-         </div>
-       </div>
-     </div>
-   `;
- }
- // ===== INTEGRAÇÕES =====
- async function renderIntegracoes(){
-   const c=document.getElementById('content');
-   c.innerHTML=`
-     <h1 class="page-title">🔌 Configuração de Integrações</h1>
-     <p class="page-sub">Cadastre suas chaves de API</p>
-     <div class="hint-bar">💡 Suas chaves ficam salvas no banco de dados</div>
-     <div class="card">
-       <div class="form-grid">
-         <div class="form-group">
-           <label>Plataforma</label>
-           <select>
-             <option>Mercado Pago</option>
-             <option>Asaas</option>
-             <option>Focus NFe</option>
-             <option>iFood</option>
-           </select>
-         </div>
-         <div class="form-group">
-           <label>API Key / Token</label>
-           <input type="password" placeholder="Cole seu token aqui">
-         </div>
-       </div>
-       <div class="form-actions">
-         <button class="btn btn-primary" onclick="toast('Configuração salva!','success')">💾 Salvar</button>
-       </div>
-     </div>
-   `;
- }
- </script>
- </body>
- </html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panificadora ERP - Gestão Completa</title>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lucide@1/dist/umd/lucide.min.js"></script>
+<style>
+:root{
+--bg:#f1f5f9; --card:#fff; --text:#0f172a; --muted:#64748b;
+--accent:#16a34a; --accent-dark:#15803d; --accent-soft:#dcfce7;
+--accent2:#f59e0b; --danger:#dc2626; --danger-soft:#fee2e2;
+--border:#e2e8f0; --header:#1e293b; --sidebar:#fff; --sidebar-hover:#f1f5f9;
+--shadow:0 1px 3px rgba(0,0,0,.06);
+}
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Quicksand',sans-serif}
+body{background:var(--bg);color:var(--text);font-size:14px}
+.hidden{display:none!important}
+#loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%)}
+.login-box{background:#fff;padding:40px;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.3);width:380px;max-width:90vw}
+.login-box h1{font-size:28px;font-weight:700;color:var(--accent-dark);margin-bottom:4px}
+.login-box p{color:var(--muted);margin-bottom:24px;font-size:14px}
+.login-box label{display:block;font-weight:600;margin:12px 0 6px;font-size:13px;color:var(--text)}
+.login-box input{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:8px;font-size:14px;outline:none}
+.login-box button{width:100%;margin-top:20px;padding:13px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer}
+.login-error{color:var(--danger);font-size:13px;margin-top:10px;min-height:18px}
+.login-hint{margin-top:16px;font-size:12px;color:var(--muted);text-align:center;background:var(--accent-soft);padding:8px;border-radius:6px}
+#app{display:flex;min-height:100vh}
+header.topbar{position:fixed;top:0;left:0;right:0;height:52px;background:var(--header);display:flex;align-items:center;padding:0 16px;z-index:100;gap:12px}
+.logo{color:#fff;font-weight:700;font-size:18px;display:flex;align-items:center;gap:8px}
+.logo span{color:var(--accent)}
+.topbar .spacer{flex:1}
+.top-icon{color:#cbd5e1;cursor:pointer;padding:6px;border-radius:6px;display:flex;align-items:center}
+.top-icon:hover{background:rgba(255,255,255,.1);color:#fff}
+.user-avatar{width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;cursor:pointer}
+.banner{background:#fef3c7;padding:8px 20px;font-size:13px;color:#92400e;display:flex;align-items:center;gap:12px;position:fixed;top:52px;left:0;right:0;z-index:99}
+.banner button{background:var(--accent);color:#fff;border:none;padding:5px 14px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer}
+aside.sidebar{position:fixed;top:52px;left:0;bottom:0;width:240px;background:var(--sidebar);border-right:1px solid var(--border);overflow-y:auto;padding:8px 0;z-index:90}
+.menu-group-header{display:flex;align-items:center;gap:8px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer}
+.menu-group.collapsed .menu-items{display:none}
+.menu-item{display:flex;align-items:center;gap:10px;padding:8px 16px 8px 42px;font-size:13px;color:var(--muted);cursor:pointer}
+.menu-item:hover{background:var(--sidebar-hover);color:var(--text)}
+.menu-item.active{background:var(--accent-soft);color:var(--accent-dark);font-weight:700;border-right:3px solid var(--accent)}
+main.content{margin-left:240px;margin-top:52px;padding:24px;flex:1;min-width:0}
+.page-title{font-size:22px;font-weight:700;margin-bottom:4px}
+.page-sub{color:var(--muted);font-size:14px;margin-bottom:20px}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:20px}
+.kpi-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;display:flex;gap:12px;align-items:flex-start}
+.kpi-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center}
+.kpi-label{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase}
+.kpi-value{font-size:22px;font-weight:700;margin-top:2px}
+.kpi-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:16px}
+.card-title{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:16px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+table.data-table{width:100%;border-collapse:collapse;font-size:13px}
+.data-table th{text-align:left;padding:10px 12px;border-bottom:2px solid var(--border);color:var(--muted);font-size:12px;text-transform:uppercase}
+.data-table td{padding:10px 12px;border-bottom:1px solid var(--border)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge.ok{background:var(--accent-soft);color:var(--accent-dark)}
+.badge.warn{background:#fef3c7;color:#92400e}
+.badge.danger{background:var(--danger-soft);color:var(--danger)}
+.badge.info{background:#dbeafe;color:#1e40af}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group label{font-size:12px;font-weight:700}
+.form-group input,.form-group select,.form-group textarea{padding:9px 12px;border:1px solid var(--border);border-radius:7px;font-size:13px}
+.btn{padding:9px 18px;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;border:none;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-secondary{background:#fff;color:var(--text);border:1px solid var(--border)}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-block{width:100%;justify-content:center}
+.form-actions{display:flex;gap:8px;margin-top:14px;justify-content:flex-end}
+.alert-item{display:flex;align-items:center;gap:12px;padding:12px;border-radius:8px;margin-bottom:8px;border:1px solid var(--border)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px}
+.modal{background:#fff;border-radius:12px;padding:24px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto}
+.empty-state{text-align:center;padding:40px 20px;color:var(--muted)}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--text);color:#fff;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:600;z-index:300}
+.toast.success{background:var(--accent)}
+.toast.error{background:var(--danger)}
+.app-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.app-tile{display:flex;gap:12px;padding:14px;border:1px solid var(--border);border-radius:10px;cursor:pointer;align-items:flex-start}
+.chart-container{width:100%;height:300px}
+.hint-bar{background:#e0f2fe;border-left:4px solid #0284c7;padding:8px 12px;margin-bottom:16px;font-size:12px;color:#075985;border-radius:4px}
+.kds-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:15px}
+.kds-card{background:#2b2d42;border-radius:8px;border-left:6px solid #e74c3c;padding:15px;color:#fff}
+.kds-card.preparo{border-left-color:#f1c40f}
+.kds-card.pronto{border-left-color:#27ae60}
+.kds-header{display:flex;justify-content:space-between;font-weight:bold;border-bottom:1px solid #444;padding-bottom:8px;margin-bottom:10px}
+.kds-btn{width:100%;padding:10px;border:none;border-radius:5px;background:#27ae60;color:#fff;font-weight:bold;cursor:pointer;font-size:14px}
+.kds-btn:hover{background:#219150}
+.key-hint{position:fixed;bottom:16px;left:16px;background:rgba(15,23,42,.9);color:#fff;padding:10px 14px;border-radius:8px;font-size:12px;z-index:500;max-width:400px}
+.key-hint kbd{background:#334155;padding:2px 6px;border-radius:3px;font-family:monospace;margin:0 2px}
+.qr-code-box{text-align:center;padding:20px;border:1px solid var(--border);border-radius:8px}
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+<div class="login-box">
+<h1>Panificadora <span style="color:var(--accent)">ERP</span></h1>
+<p>Gestão completa da sua padaria</p>
+<label>Matrícula</label>
+<input type="text" id="loginMatricula" placeholder="AP-2026-0001" value="AP-2026-0001">
+<label>Senha</label>
+<input type="password" id="loginSenha" placeholder="•••" value="123">
+<button onclick="fazerLogin()">Entrar</button>
+<div class="login-error" id="loginError"></div>
+<div class="login-hint">Padrão: AP-2026-0001 / 123</div>
+</div>
+</div>
+
+<div id="app" class="hidden">
+<header class="topbar">
+<div class="top-icon" onclick="toggleSidebar()"><i data-lucide="menu"></i></div>
+<div class="logo">Panificadora<span>ERP</span></div>
+<div class="spacer"></div>
+<div class="top-icon" onclick="showView('dashboard')" title="Início"><i data-lucide="layout-grid"></i></div>
+<div class="top-icon" onclick="window.open('/site','_blank')" title="Ver Site Público"><i data-lucide="globe"></i></div>
+<div class="top-icon" onclick="showView('ia-vendas')" title="IA de Vendas"><i data-lucide="sparkles"></i></div>
+<div class="top-icon" onclick="showView('integracoes')" title="Integrações"><i data-lucide="settings"></i></div>
+<div class="top-icon" onclick="showView('kds')" title="Cozinha"><i data-lucide="chef-hat"></i></div>
+<div class="top-icon" onclick="showView('alertas-estoque')" title="Estoque Baixo"><i data-lucide="alert-triangle"></i></div>
+<div class="user-avatar" onclick="fazerLogout()" title="Sair">AD</div>
+</header>
+
+<div class="banner"><span>Sistema em funcionamento — conectado ao banco de dados.</span><button onclick="showView('dashboard')">Ver resumo</button></div>
+
+<aside class="sidebar" id="sidebar">
+<div class="menu-group"><div class="menu-group-header" onclick="toggleGroup(this)">Dashboard</div><div class="menu-items">
+<div class="menu-item active" data-view="dashboard" onclick="showView('dashboard')">Visão Geral</div>
+<div class="menu-item" data-view="caixa" onclick="showView('caixa')">Caixa / PDV</div></div></div>
+
+<div class="menu-group"><div class="menu-group-header" onclick="toggleGroup(this)">Cadastros</div><div class="menu-items">
+<div class="menu-item" data-view="produtos" onclick="showView('produtos')">Produtos</div>
+<div class="menu-item" data-view="clientes" onclick="showView('clientes')">Clientes</div>
+<div class="menu-item" data-view="fornecedores" onclick="showView('fornecedores')">Fornecedores</div>
+<div class="menu-item" data-view="funcionarios" onclick="showView('funcionarios')">Funcionários</div></div></div>
+
+<div class="menu-group"><div class="menu-group-header" onclick="toggleGroup(this)">Vendas</div><div class="menu-items">
+<div class="menu-item" data-view="vendas" onclick="showView('vendas')">Vendas</div>
+<div class="menu-item" data-view="comandas" onclick="showView('comandas')">Comandas</div>
+<div class="menu-item" data-view="pedidos-site" onclick="showView('pedidos-site')">Pedidos do Site</div>
+<div class="menu-item" data-view="pagamentos" onclick="showView('pagamentos')">Pagamentos / PIX</div></div></div>
+
+<div class="menu-group"><div class="menu-group-header" onclick="toggleGroup(this)">Estoque / WMS</div><div class="menu-items">
+<div class="menu-item" data-view="estoque" onclick="showView('estoque')">Estoque</div>
+<div class="menu-item" data-view="movimentos" onclick="showView('movimentos')">Movimentações</div>
+<div class="menu-item" data-view="alertas-estoque" onclick="showView('alertas-estoque')">⚠️ Alertas de Estoque</div>
+<div class="menu-item" data-view="kds" onclick="showView('kds')">🍳 Painel Cozinha</div></div></div>
+
+<div class="menu-group"><div class="menu-group-header" onclick="toggleGroup(this)">Financeiro</div><div class="menu-items">
+<div class="menu-item" data-view="contas" onclick="showView('contas')">Contas a Pagar/Receber</div>
+<div class="menu-item" data-view="tesouraria" onclick="showView('tesouraria')">Tesouraria</div>
+<div class="menu-item" data-view="bancos" onclick="showView('bancos')">Vincular Bancos</div>
+<div class="menu-item" data-view="autorizacoes" onclick="showView('autorizacoes')">Autorizações</div></div></div>
+
+<div class="menu-group"><div class="menu-group-header" onclick="toggleGroup(this)">Contábil / Fiscal</div><div class="menu-items">
+<div class="menu-item" data-view="nf" onclick="showView('nf')">NF Entrada / Saída</div>
+<div class="menu-item" data-view="nfce" onclick="showView('nfce')">NFC-e / Cupom Fiscal</div>
+<div class="menu-item" data-view="dre" onclick="showView('dre')">DRE + Simulador</div></div></div>
+
+<div class="menu-group"><div class="menu-group-header" onclick="toggleGroup(this)">RH</div><div class="menu-items">
+<div class="menu-item" data-view="ponto" onclick="showView('ponto')">Ponto</div>
+<div class="menu-item" data-view="ferias" onclick="showView('ferias')">Férias</div>
+<div class="menu-item" data-view="holerites" onclick="showView('holerites')">Holerites</div></div></div>
+
+<div class="menu-group"><div class="menu-group-header" onclick="toggleGroup(this)">Configurações</div><div class="menu-items">
+<div class="menu-item" data-view="integracoes" onclick="showView('integracoes')">🔌 Integrações</div>
+<div class="menu-item" data-view="agenda" onclick="showView('agenda')">Agenda</div>
+<div class="menu-item" data-view="arquivos" onclick="showView('arquivos')">Arquivos</div></div></div>
+</aside>
+
+<main class="content" id="content"></main>
+</div>
+
+<div id="modalContainer"></div>
+<div id="toastContainer"></div>
+
+<div class="key-hint" id="keyHint">
+<strong>Atalhos do Sistema:</strong>
+<kbd>F2</kbd> Nova Venda
+<kbd>F4</kbd> Comandas
+<kbd>F8</kbd> Pagamento
+<kbd>F9</kbd> Finalizar
+<kbd>ESC</kbd> Cancelar
+</div>
+
+<script>
+const API_BASE = window.location.origin;
+let currentUser = JSON.parse(localStorage.getItem('erp_user') || 'null');
+let currentView = 'dashboard';
+
+async function apiGET(path){
+  try{
+    const r=await fetch(API_BASE+path);
+    return await r.json();
+  }catch(e){
+    console.error('Erro na requisição:', e);
+    return {erro:'Servidor offline'};
+  }
+}
+
+async function apiPOST(path,data){
+  try{
+    const r=await fetch(API_BASE+path,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(data||{})
+    });
+    return await r.json();
+  }catch(e){
+    console.error('Erro na requisição:', e);
+    return {erro:'Servidor offline'};
+  }
+}
+
+function toast(msg,tipo='success'){
+  const t=document.createElement('div');
+  t.className='toast '+tipo;
+  t.textContent=msg;
+  document.getElementById('toastContainer').appendChild(t);
+  setTimeout(()=>t.remove(),3000);
+}
+
+function fmt(v){
+  return 'R$ '+(parseFloat(v||0)).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+function userPayload(){
+  return {
+    usuario: {
+      matricula: currentUser ? currentUser.matricula : 'AP-2026-0001'
+    }
+  };
+}
+
+async function fazerLogin(){
+  const mat=document.getElementById('loginMatricula').value;
+  const senha=document.getElementById('loginSenha').value;
+  
+  if(mat==='AP-2026-0001' && senha==='123'){
+    currentUser={matricula:mat,nome:'Administrador'};
+    localStorage.setItem('erp_user',JSON.stringify(currentUser));
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    showView('dashboard');
+    lucide.createIcons();
+  }else{
+    document.getElementById('loginError').textContent='Matrícula ou senha inválida';
+  }
+}
+
+function fazerLogout(){
+  localStorage.removeItem('erp_user');
+  currentUser=null;
+  location.reload();
+}
+
+if(currentUser){
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+}
+
+function toggleGroup(el){
+  el.parentElement.classList.toggle('collapsed');
+}
+
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('hidden');
+}
+
+// ===== ATALHOS DE TECLADO =====
+document.addEventListener('keydown', function(event) {
+  const emInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName);
+  if(emInput && event.key!=='Escape') return;
+
+  switch(event.key) {
+    case 'F2':
+      event.preventDefault();
+      toast('F2 - Nova Venda');
+      showView('caixa');
+      break;
+    case 'F4':
+      event.preventDefault();
+      toast('F4 - Abrir Comandas');
+      showView('comandas');
+      break;
+    case 'F8':
+      event.preventDefault();
+      toast('F8 - Pagamentos');
+      showView('pagamentos');
+      break;
+    case 'F9':
+      event.preventDefault();
+      toast('F9 - Finalizar Venda');
+      break;
+    case 'Escape':
+      document.querySelectorAll('.modal-overlay').forEach(m=>m.remove());
+      break;
+  }
+});
+
+function showView(view){
+  currentView=view;
+  document.querySelectorAll('.menu-item').forEach(m=>{
+    m.classList.toggle('active',m.dataset.view===view);
+  });
+  
+  const renderers={
+    dashboard:renderDashboard,
+    caixa:renderCaixa,
+    produtos:renderProdutos,
+    clientes:renderClientes,
+    fornecedores:renderFornecedores,
+    funcionarios:renderFuncionarios,
+    vendas:renderVendas,
+    comandas:renderComandas,
+    'pedidos-site':renderPedidosSite,
+    estoque:renderEstoque,
+    movimentos:renderMovimentos,
+    contas:renderContas,
+    tesouraria:renderTesouraria,
+    autorizacoes:renderAutorizacoes,
+    ponto:renderPonto,
+    ferias:renderFerias,
+    holerites:renderHolerites,
+    'bot-config':renderBotConfig,
+    gerente:renderGerente,
+    'ia-vendas':renderIAVendas,
+    arquivos:renderArquivos,
+    agenda:renderAgenda,
+    bancos:renderBancos,
+    nf:renderNF,
+    nfce:renderNFCE,
+    dre:renderDRE,
+    integracoes:renderIntegracoes,
+    'alertas-estoque':renderAlertasEstoque,
+    kds:renderKDS,
+    pagamentos:renderPagamentos
+  };
+  
+  const renderer=renderers[view]||renderDashboard;
+  renderer();
+  lucide.createIcons();
+}
+
+function tabelaSimples(dados,colunas,acoes){
+  if(!dados||!dados.length){
+    return '<div class="empty-state"><p>Nenhum registro encontrado</p></div>';
+  }
+  return '<table class="data-table"><thead><tr>'+
+    colunas.map(c=>'<th>'+c.titulo+'</th>').join('')+
+    (acoes?'<th>Ações</th>':'')+'</tr></thead><tbody>'+
+    dados.map(d=>'<tr>'+
+      colunas.map(c=>'<td>'+(c.render?c.render(d):(d[c.chave]??'-'))+'</td>').join('')+
+      (acoes?'<td>'+acoes(d)+'</td>':'')+'</tr>').join('')+
+    '</tbody></table>';
+}
+
+// ===== DASHBOARD =====
+async function renderDashboard(){
+  const c=document.getElementById('content');
+  c.innerHTML=`
+    <h1 class="page-title">Visão Geral</h1>
+    <p class="page-sub">Resumo da sua panificadora</p>
+    
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div>
+          <div class="kpi-label">Vendas Hoje</div>
+          <div class="kpi-value">${fmt(0)}</div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div>
+          <div class="kpi-label">Produtos</div>
+          <div class="kpi-value">0</div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div>
+          <div class="kpi-label">Pedidos Pendentes</div>
+          <div class="kpi-value">0</div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div>
+          <div class="kpi-label">Estoque Baixo</div>
+          <div class="kpi-value">0</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Acesso Rápido</div>
+      <div class="app-grid">
+        <div class="app-tile" onclick="showView('caixa')">
+          <i data-lucide="cash-register"></i>
+          <div><strong>PDV / Caixa</strong><br>Registrar vendas</div>
+        </div>
+        <div class="app-tile" onclick="showView('produtos')">
+          <i data-lucide="package"></i>
+          <div><strong>Produtos</strong><br>Cadastrar produtos</div>
+        </div>
+        <div class="app-tile" onclick="showView('kds')">
+          <i data-lucide="chef-hat"></i>
+          <div><strong>Cozinha</strong><br>Acompanhar pedidos</div>
+        </div>
+        <div class="app-tile" onclick="showView('alertas-estoque')">
+          <i data-lucide="alert-triangle"></i>
+          <div><strong>Estoque</strong><br>Verificar níveis</div>
+        </div>
+        <div class="app-tile" onclick="showView('pedidos-site')">
+          <i data-lucide="shopping-bag"></i>
+          <div><strong>Pedidos Site</strong><br>Pedidos online</div>
+        </div>
+        <div class="app-tile" onclick="showView('integracoes')">
+          <i data-lucide="settings"></i>
+          <div><strong>Integrações</strong><br>APIs e Tokens</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+async function renderCaixa(){
+  const c=document.getElementById('content');
+  c.innerHTML=`
+    <h1 class="page-title">Caixa / PDV</h1>
+    <p class="page-sub">Use <kbd style="background:#eee;padding:2px 6px;border-radius:3px">F2</kbd> Nova Venda | <kbd style="background:#eee;padding:2px 6px;border-radius:3px">F9</kbd> Finalizar</p>
+    <div class="card">
+      <div class="grid-2">
+        <div><strong>Status:</strong> Caixa fechado</div>
+        <div><strong>Operador:</strong> ${currentUser?.nome || 'ADMIN'}</div>
+        <div><strong>Saldo Inicial:</strong> ${fmt(0)}</div>
+        <div><strong>Saldo Atual:</strong> ${fmt(0)}</div>
+      </div>
+      <br>
+      <button class="btn btn-primary" onclick="toast('Caixa aberto!','success')">Abrir Caixa</button>
+    </div>
+  `;
+}
+
+async function renderProdutos(){
+  const c=document.getElementById('content');
+  c.innerHTML='<h1 class="page-title">Produtos</h1><div class="card">Lista de produtos aparecerá aqui</div>';
+}
+async function renderClientes(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Clientes</h1><div class="card">Lista de clientes</div>'; }
+async function renderFornecedores(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Fornecedores</h1><div class="card">Lista de fornecedores</div>'; }
+async function renderFuncionarios(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Funcionários</h1><div class="card">Lista de funcionários</div>'; }
+async function renderVendas(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Vendas</h1><div class="card">Histórico de vendas</div>'; }
+async function renderComandas(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Comandas</h1><div class="card">Comandas em uso</div>'; }
+async function renderPedidosSite(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Pedidos do Site</h1><div class="card">Pedidos recebidos online</div>'; }
+async function renderEstoque(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Estoque</h1><div class="card">Controle de estoque</div>'; }
+async function renderMovimentos(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Movimentações</h1><div class="card">Histórico de movimentações</div>'; }
+async function renderContas(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Contas a Pagar/Receber</h1><div class="card">Contas</div>'; }
+async function renderTesouraria(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Tesouraria</h1><div class="card">Saldo e movimentações financeiras</div>'; }
+async function renderAutorizacoes(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Autorizações</h1><div class="card">Aguardando autorização</div>'; }
+async function renderPonto(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Ponto</h1><div class="card">Registro de ponto</div>'; }
+async function renderFerias(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Férias</h1><div class="card">Controle de férias</div>'; }
+async function renderHolerites(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Holerites</h1><div class="card">Holerites</div>'; }
+async function renderBotConfig(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Configuração do Bot</h1><div class="card">Configurações do WhatsApp</div>'; }
+async function renderGerente(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Gerente Ambiente</h1><div class="card">Painel do gerente</div>'; }
+async function renderIAVendas(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">IA de Vendas</h1><div class="card">Assistente de vendas</div>'; }
+async function renderArquivos(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Arquivos</h1><div class="card">Upload e gerenciamento de arquivos</div>'; }
+async function renderAgenda(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Agenda</h1><div class="card">Calendário e compromissos</div>'; }
+async function renderBancos(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Bancos</h1><div class="card">Contas bancárias</div>'; }
+async function renderNF(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Notas Fiscais</h1><div class="card">Notas fiscais de entrada e saída</div>'; }
+async function renderNFCE(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">NFC-e</h1><div class="card">Emissão de cupom fiscal</div>'; }
+async function renderDRE(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">DRE</h1><div class="card">Demonstrativo de resultado</div>'; }
+async function renderPagamentos(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Pagamentos</h1><div class="card">Métodos de pagamento e PIX</div>'; }
+
+// ===== ALERTAS DE ESTOQUE =====
+async function renderAlertasEstoque(){
+  const c=document.getElementById('content');
+  c.innerHTML=`
+    <h1 class="page-title">⚠️ Alertas de Estoque Mínimo</h1>
+    <p class="page-sub">Produtos abaixo do nível recomendado</p>
+    <div class="hint-bar">🔔 Verifique semanalmente para não faltar produtos!</div>
+    <div class="card">
+      <div class="empty-state">
+        <i data-lucide="check-circle" style="width:48px;height:48px;color:var(--accent)"></i>
+        <p>Tudo em ordem! Nenhum produto com estoque baixo.</p>
+      </div>
+    </div>
+  `;
+}
+
+// ===== PAINEL DA COZINHA (KDS) =====
+async function renderKDS(){
+  const c=document.getElementById('content');
+  c.innerHTML=`
+    <h1 class="page-title">🍳 Painel de Produção — KDS</h1>
+    <p class="page-sub">Pedidos em tempo real</p>
+    <div class="card">
+      <div class="kds-grid">
+        <div class="empty-state" style="grid-column:1/-1">
+          <i data-lucide="check-circle" style="width:48px;height:48px;color:var(--accent)"></i>
+          <p>Nenhum pedido pendente. Tudo em ordem!</p>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ===== INTEGRAÇÕES =====
+async function renderIntegracoes(){
+  const c=document.getElementById('content');
+  c.innerHTML=`
+    <h1 class="page-title">🔌 Configuração de Integrações</h1>
+    <p class="page-sub">Cadastre suas chaves de API</p>
+    <div class="hint-bar">💡 Suas chaves ficam salvas no banco de dados</div>
+    <div class="card">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Plataforma</label>
+          <select>
+            <option>Mercado Pago</option>
+            <option>Asaas</option>
+            <option>Focus NFe</option>
+            <option>iFood</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>API Key / Token</label>
+          <input type="password" placeholder="Cole seu token aqui">
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick="toast('Configuração salva!','success')">💾 Salvar</button>
+      </div>
+    </div>
+  `;
+}
+
+</script>
+</body>
+</html>
