@@ -90,7 +90,11 @@ class APIHandler(BaseHTTPRequestHandler):
     def responder(self,d,s=200):
         try:
             self.set_headers(s)
-            self.wfile.write(json.dumps(d,default=str,ensure_ascii=False).encode("utf-8"))
+            try:
+                self.wfile.write(json.dumps(d,default=str,ensure_ascii=False).encode("utf-8"))
+            except (BrokenPipeError, ConnectionResetError):
+                pass
+            return True
         except:
             pass
     def log_message(self,f,*a): print(f"[{datetime.now().strftime('%H:%M:%S')}] {a[0]}",flush=True)
@@ -101,7 +105,11 @@ class APIHandler(BaseHTTPRequestHandler):
             if os.path.exists(c):
                 with open(c,"rb") as f: data=f.read()
                 self.send_response(200); self.send_header("Content-Type",ctype); self.end_headers()
-                self.wfile.write(data); return True
+                try:
+                    self.wfile.write(data);
+                except (BrokenPipeError, ConnectionResetError):
+                    pass 
+                return True
         return False
     def do_GET(self):
         from urllib.parse import urlparse as up, parse_qs as pq
