@@ -1,12 +1,47 @@
-cur.execute("""CREATE TABLE IF NOT EXISTS contas_bancarias (id SERIAL PRIMARY KEY, banco TEXT, ag_conta TEXT, provedor TEXT DEFAULT 'MANUAL', item_id TEXT, saldo NUMERIC DEFAULT 0, ultimo_sync TIMESTAMP, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
-cur.execute("""CREATE TABLE IF NOT EXISTS integracoes_config (id SERIAL PRIMARY KEY, tipo TEXT UNIQUE, provedor TEXT, api_key TEXT, client_id TEXT, client_secret TEXT, config_extra TEXT, ativo BOOLEAN DEFAULT FALSE, ultimo_sync TIMESTAMP, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
-cur.execute("""CREATE TABLE IF NOT EXISTS maquininhas (id SERIAL PRIMARY KEY, operadora TEXT, taxa NUMERIC DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
-cur.execute("""CREATE TABLE IF NOT EXISTS repasses_ifood (id SERIAL PRIMARY KEY, periodo TEXT, bruto NUMERIC DEFAULT 0, taxa NUMERIC DEFAULT 0, liquido NUMERIC DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
-cur.execute("""CREATE TABLE IF NOT EXISTS boletos (id SERIAL PRIMARY KEY, conta_id INT, nosso_numero TEXT, link TEXT, linha_digitavel TEXT, valor NUMERIC DEFAULT 0, vencimento DATE, status TEXT DEFAULT 'EMITIDO', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
-cur.execute("""CREATE TABLE IF NOT EXISTS notas_fiscais (id SERIAL PRIMARY KEY, tipo TEXT, numero TEXT, pessoa TEXT, total NUMERIC DEFAULT 0, total_impostos NUMERIC DEFAULT 0, aliq_icms NUMERIC DEFAULT 0, aliq_pis NUMERIC DEFAULT 0, aliq_cofins NUMERIC DEFAULT 0, aliq_iss NUMERIC DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
-cur.execute("""CREATE TABLE IF NOT EXISTS lancamentos_contabeis (id SERIAL PRIMARY KEY, origem TEXT, referencia_id INT, descricao TEXT, valor NUMERIC DEFAULT 0, tipo TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
-cur.execute("""CREATE TABLE IF NOT EXISTS arquivos (id SERIAL PRIMARY KEY, categoria TEXT, referencia TEXT, nome TEXT, url TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
-cur.execute("""CREATE TABLE IF NOT EXISTS eventos_agenda (id SERIAL PRIMARY KEY, titulo TEXT, inicio TIMESTAMP, fim TIMESTAMP, tipo TEXT, responsavel TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
-cur.execute("""CREATE TABLE IF NOT EXISTS ponto_registros (id SERIAL PRIMARY KEY, funcionario_matricula TEXT, data DATE, entrada TIME, saida TIME, pausa_min NUMERIC DEFAULT 60, horas_trabalhadas NUMERIC DEFAULT 8, horas_extras NUMERIC DEFAULT 0, status TEXT DEFAULT 'ATIVO', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
-cur.execute("""CREATE TABLE IF NOT EXISTS ponto_ajustes (id SERIAL PRIMARY KEY, ponto_id INT, funcionario_matricula TEXT, data_ref DATE, campo TEXT, valor_antigo TEXT, valor_novo TEXT, motivo TEXT, status TEXT DEFAULT 'PENDENTE', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
-cur.execute("""CREATE TABLE IF NOT EXISTS atestados (id SERIAL PRIMARY KEY, funcionario_matricula TEXT, data DATE, dias NUMERIC DEFAULT 1, motivo TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")txt
+if path == "/api/bancos/config":
+    cur.execute("SELECT * FROM integracoes_config ORDER BY tipo")
+    cfgs = [dict(r) for r in (cur.fetchall() or [])]
+    cur.execute("SELECT * FROM contas_bancarias ORDER BY id DESC LIMIT 100")
+    cts = [dict(r) for r in (cur.fetchall() or [])]
+    return self.responder({"configs": cfgs, "contas": cts})
+if path == "/api/bancos/vinculos":
+    cur.execute("SELECT * FROM contas_bancarias ORDER BY id DESC LIMIT 100")
+    cts = [dict(r) for r in (cur.fetchall() or [])]
+    cur.execute("SELECT * FROM maquininhas ORDER BY id DESC LIMIT 100")
+    mqs = [dict(r) for r in (cur.fetchall() or [])]
+    cur.execute("SELECT * FROM repasses_ifood ORDER BY id DESC LIMIT 100")
+    ifs = [dict(r) for r in (cur.fetchall() or [])]
+    return self.responder({"contas": cts, "maquininhas": mqs, "ifood": ifs})
+if path == "/api/nf_lista":
+    cur.execute("SELECT * FROM notas_fiscais ORDER BY id DESC LIMIT 100")
+    return self.responder({"notas": [dict(r) for r in (cur.fetchall() or [])]})
+if path == "/api/dre_resumo":
+    comp = query.get("comp", [""])[0]
+    cur.execute("SELECT * FROM notas_fiscais ORDER BY id DESC LIMIT 500")
+    nfs = [dict(r) for r in (cur.fetchall() or [])]
+    rec = sum(float(n.get("total") or 0) for n in nfs if n.get("tipo") == "SAIDA")
+    imp = sum(float(n.get("total_impostos") or 0) for n in nfs if n.get("tipo") == "SAIDA")
+    cus = sum(float(n.get("total") or 0) for n in nfs if n.get("tipo") == "ENTRADA")
+    liq = rec - imp
+    return self.responder({"receita": rec, "impostos": imp, "liq": liq, "custos": cus, "lucro": liq - cus})
+if path == "/api/arquivos_lista":
+    cur.execute("SELECT * FROM arquivos ORDER BY id DESC LIMIT 100")
+    return self.responder({"arquivos": [dict(r) for r in (cur.fetchall() or [])]})
+if path == "/api/agenda_lista":
+    ano = query.get("ano", [None])[0]; mes = query.get("mes", [None])[0]
+    cur.execute("SELECT * FROM eventos_agenda ORDER BY inicio LIMIT 200")
+    evs = [dict(r) for r in (cur.fetchall() or [])]
+    if ano and mes:
+        pref = f"{ano}-{str(mes).zfill(2)}"
+        evs = [e for e in evs if str(e.get("inicio") or "").startswith(pref)]
+    return self.responder({"eventos": evs})
+if path == "/api/rh/ponto_calc":
+    cur.execute("SELECT * FROM ponto_registros ORDER BY data DESC, id DESC LIMIT 500")
+    pts = [dict(r) for r in (cur.fetchall() or [])]
+    cur.execute("SELECT * FROM ponto_ajustes ORDER BY id DESC LIMIT 200")
+    ajs = [dict(r) for r in (cur.fetchall() or [])]
+    cur.execute("SELECT * FROM atestados ORDER BY data DESC LIMIT 200")
+    ats = [dict(r) for r in (cur.fetchall() or [])]
+    cur.execute("SELECT matricula, nome, salario FROM funcionarios ORDER BY nome")
+    fns = [dict(r) for r in (cur.fetchall() or [])]
+    return self.responder({"ponto": pts, "ajustes": ajs, "atestados": ats, "funcionarios": fns})
