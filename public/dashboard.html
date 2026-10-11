@@ -116,6 +116,8 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13px}
     <div class="top-icon" onclick="showView('arquivos')" title="Arquivos"><i data-lucide="folder-open"></i></div>
     <div class="top-icon" onclick="showView('agenda')" title="Agenda"><i data-lucide="calendar"></i></div>
     <div class="top-icon" onclick="showView('gerente')" title="Alertas"><i data-lucide="bell"></i></div>
+    <div class="top-icon" onclick="showView('arquivos')" title="Arquivos"><i data-lucide="folder-open"></i></div>
+    <div class="top-icon" onclick="showView('agenda')" title="Agenda"><i data-lucide="calendar"></i></div>
     <div class="user-avatar" onclick="fazerLogout()" title="Sair">AD</div>
   </header>
   <div class="banner"><span>Sistema em funcionamento — conectado ao banco de dados.</span><button onclick="showView('dashboard')">Ver resumo</button></div>
@@ -232,6 +234,7 @@ async function simular(){ const r=await apiPOST('/api/dre/simular',{regime:docum
 
 if(currentUser) showView('dashboard');
 lucide.createIcons();
+<script src="novas.js">
 </script>
 </body>
 </html>
