@@ -19,7 +19,7 @@
 body{background:var(--bg);color:var(--text);font-size:14px}
 .hidden{display:none!important}
 
-#loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%)}
+#loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%);position:fixed;inset:0;z-index:9999}
 .login-box{background:#fff;padding:40px;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.3);width:380px;max-width:90vw}
 .login-box h1{font-size:28px;font-weight:700;color:var(--accent-dark);margin-bottom:4px}
 .login-box p{color:var(--muted);margin-bottom:24px;font-size:14px}
@@ -38,9 +38,6 @@ header.topbar{position:fixed;top:0;left:0;right:0;height:52px;background:var(--h
 .top-icon:hover{background:rgba(255,255,255,.1);color:#fff}
 .user-avatar{width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;cursor:pointer}
 
-.banner{background:#fef3c7;padding:8px 20px;font-size:13px;color:#92400e;display:flex;align-items:center;gap:12px;position:fixed;top:52px;left:0;right:0;z-index:99}
-.banner button{background:var(--accent);color:#fff;border:none;padding:5px 14px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer}
-
 aside.sidebar{position:fixed;top:52px;left:0;bottom:0;width:240px;background:var(--sidebar);border-right:1px solid var(--border);overflow-y:auto;padding:8px 0;z-index:90}
 .menu-group-header{display:flex;align-items:center;gap:8px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer}
 .menu-group.collapsed .menu-items{display:none}
@@ -52,14 +49,8 @@ main.content{margin-left:240px;margin-top:52px;padding:24px;flex:1;min-width:0}
 .page-title{font-size:22px;font-weight:700;margin-bottom:4px}
 .page-sub{color:var(--muted);font-size:14px;margin-bottom:20px}
 
-.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:20px}
-.kpi-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;display:flex;gap:12px;align-items:flex-start}
-.kpi-label{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase}
-.kpi-value{font-size:22px;font-weight:700;margin-top:2px}
-
-.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:16px}
+.card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow)}
 .card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-.card-title{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px}
 
 table.data-table{width:100%;border-collapse:collapse;font-size:13px}
 .data-table th{text-align:left;padding:10px 12px;border-bottom:2px solid var(--border);color:var(--muted);font-size:12px;text-transform:uppercase}
@@ -71,7 +62,7 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13px}
 .badge.danger{background:var(--danger-soft);color:var(--danger)}
 
 .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
-.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
 .form-group label{font-size:12px;font-weight:700}
 .form-group input,.form-group select{padding:9px 12px;border:1px solid var(--border);border-radius:7px;font-size:13px;width:100%}
 
@@ -90,6 +81,7 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13px}
 </head>
 <body>
 
+<!-- TELA DE LOGIN -->
 <div id="loginScreen">
   <div class="login-box">
     <h1>Panificadora <span style="color:var(--accent)">ERP</span></h1>
@@ -100,18 +92,20 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13px}
     <input type="password" id="loginSenha" value="123">
     <button onclick="fazerLogin()">Entrar</button>
     <div class="login-error" id="loginError"></div>
+    <div class="login-hint">Padrão: AP-2026-0001 / 123</div>
   </div>
 </div>
 
+<!-- APLICAÇÃO PRINCIPAL -->
 <div id="app" class="hidden">
   <header class="topbar">
     <div class="top-icon" onclick="toggleSidebar()"><i data-lucide="menu"></i></div>
     <div class="logo">Panificadora<span>ERP</span></div>
     <div class="spacer"></div>
-    <div class="top-icon" onclick="showView('dashboard')"><i data-lucide="layout-grid"></i></div>
-    <div class="top-icon" onclick="showView('kds')"><i data-lucide="chef-hat"></i></div>
-    <div class="top-icon" onclick="showView('integracoes')"><i data-lucide="key"></i></div>
-    <div class="user-avatar" onclick="fazerLogout()">AD</div>
+    <div class="top-icon" onclick="showView('dashboard')" title="Início"><i data-lucide="layout-grid"></i></div>
+    <div class="top-icon" onclick="showView('kds')" title="Cozinha (KDS)"><i data-lucide="chef-hat"></i></div>
+    <div class="top-icon" onclick="showView('integracoes')" title="Configurar APIs"><i data-lucide="key"></i></div>
+    <div class="user-avatar" onclick="fazerLogout()" title="Sair">AD</div>
   </header>
 
   <aside class="sidebar" id="sidebar">
@@ -142,7 +136,15 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13px}
 
 <script>
 const API_BASE = window.location.origin;
-let currentUser = JSON.parse(localStorage.getItem('erp_user') || 'null');
+let currentUser = null;
+try {
+  currentUser = JSON.parse(localStorage.getItem('erp_user') || 'null');
+} catch(e) { currentUser = null; }
+
+if (currentUser && currentUser.matricula) {
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+}
 
 async function apiGET(path){ try{ const r=await fetch(API_BASE+path); return await r.json(); }catch(e){ return {erro:'Offline'}; } }
 async function apiPOST(path,data){ try{ const r=await fetch(API_BASE+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data||{})}); return await r.json(); }catch(e){ return {erro:'Offline'}; } }
@@ -154,11 +156,18 @@ async function fazerLogin(){
   const mat=document.getElementById('loginMatricula').value;
   const senha=document.getElementById('loginSenha').value;
   const r=await apiPOST('/api/login',{matricula:mat,senha});
-  if(r.sucesso){ currentUser=r.usuario; localStorage.setItem('erp_user',JSON.stringify(r.usuario)); location.reload(); }
-  else document.getElementById('loginError').textContent=r.erro;
+  if(r.sucesso){
+    currentUser=r.usuario;
+    localStorage.setItem('erp_user',JSON.stringify(r.usuario));
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    showView('dashboard');
+  } else {
+    document.getElementById('loginError').textContent=r.erro || 'Erro ao entrar';
+  }
 }
+
 function fazerLogout(){ localStorage.removeItem('erp_user'); location.reload(); }
-if(currentUser){ document.getElementById('loginScreen').classList.add('hidden'); document.getElementById('app').classList.remove('hidden'); }
 
 function toggleSidebar(){ document.getElementById('sidebar').classList.toggle('hidden'); }
 function toggleGroup(el){ el.parentElement.classList.toggle('collapsed'); }
@@ -179,19 +188,15 @@ function tabelaSimples(dados,colunas,acoes){
   return '<table class="data-table"><thead><tr>'+colunas.map(c=>'<th>'+c.titulo+'</th>').join('')+(acoes?'<th>Ações</th>':'')+'</tr></thead><tbody>'+dados.map(d=>'<tr>'+colunas.map(c=>'<td>'+(c.render?c.render(d):(d[c.chave]??'-'))+'</td>').join('')+(acoes?'<td>'+acoes(d)+'</td>':'')+'</tr>').join('')+'</tbody></table>';
 }
 
-// ===== PRODUTOS (COM FORMULÁRIO E EDIÇÃO) =====
+// ===== PRODUTOS =====
 async function renderProdutos(){
   const c=document.getElementById('content');
-  c.innerHTML=`
-    <div class="card-header"><h1 class="page-title">Produtos</h1><button class="btn btn-primary" onclick="modalProduto()">+ Novo Produto</button></div>
-    <div class="card" id="listaProds">Carregando...</div>
-  `;
+  c.innerHTML=`<div class="card-header"><h1 class="page-title">Produtos</h1><button class="btn btn-primary" onclick="modalProduto()">+ Novo Produto</button></div><div class="card" id="listaProds">Carregando...</div>`;
   const r=await apiGET('/api/produtos');
   window._produtos = r.produtos || [];
   document.getElementById('listaProds').innerHTML=tabelaSimples(window._produtos, [
-    {chave:'sku', titulo:'SKU'}, {chave:'nome', titulo:'Nome'}, 
-    {chave:'categoria', titulo:'Categoria'}, {chave:'preco_venda', titulo:'Preço Venda', render:d=>fmt(d.preco_venda)},
-    {chave:'custo', titulo:'Custo', render:d=>fmt(d.custo)}, {chave:'estoque_minimo', titulo:'Min'}
+    {chave:'sku', titulo:'SKU'}, {chave:'nome', titulo:'Nome'}, {chave:'categoria', titulo:'Categoria'}, 
+    {chave:'preco_venda', titulo:'Preço', render:d=>fmt(d.preco_venda)}, {chave:'estoque_minimo', titulo:'Min'}
   ], d=>`<button class="btn btn-secondary btn-sm" onclick="modalProduto(${d.id})">✏️ Editar</button>`);
 }
 
@@ -209,39 +214,30 @@ function modalProduto(id=null){
           <div class="form-group"><label>Custo</label><input id="pCusto" type="number" value="${p.custo||0}"></div>
           <div class="form-group"><label>Estoque Mínimo</label><input id="pMin" type="number" value="${p.estoque_minimo||10}"></div>
         </div>
-        <div class="form-actions">
-          <button class="btn btn-secondary" onclick="document.querySelector('.modal-overlay').remove()">Cancelar</button>
-          <button class="btn btn-primary" onclick="salvarProduto(${id})">Salvar</button>
-        </div>
+        <div class="form-actions"><button class="btn btn-secondary" onclick="document.querySelector('.modal-overlay').remove()">Cancelar</button><button class="btn btn-primary" onclick="salvarProduto(${id})">Salvar</button></div>
       </div>
-    </div>
-  `;
+    </div>`;
 }
 
 async function salvarProduto(id){
   const payload = {
-    ...userPayload(), id: id,
-    sku: document.getElementById('pSku').value, nome: document.getElementById('pNome').value,
+    ...userPayload(), id, sku: document.getElementById('pSku').value, nome: document.getElementById('pNome').value,
     categoria: document.getElementById('pCat').value, preco_venda: document.getElementById('pPreco').value,
     custo: document.getElementById('pCusto').value, estoque_minimo: document.getElementById('pMin').value
   };
   const r = await apiPOST('/api/produtos/salvar', payload);
-  if(r.sucesso){ toast('Produto salvo com sucesso!'); document.querySelector('.modal-overlay').remove(); renderProdutos(); }
-  else toast(r.erro||'Erro ao salvar', 'error');
+  if(r.sucesso){ toast('Salvo com sucesso!'); document.querySelector('.modal-overlay').remove(); renderProdutos(); }
+  else toast(r.erro||'Erro', 'error');
 }
 
-// ===== CLIENTES (COM FORMULÁRIO E EDIÇÃO) =====
+// ===== CLIENTES =====
 async function renderClientes(){
   const c=document.getElementById('content');
-  c.innerHTML=`
-    <div class="card-header"><h1 class="page-title">Clientes</h1><button class="btn btn-primary" onclick="modalCliente()">+ Novo Cliente</button></div>
-    <div class="card" id="listaClientes">Carregando...</div>
-  `;
+  c.innerHTML=`<div class="card-header"><h1 class="page-title">Clientes</h1><button class="btn btn-primary" onclick="modalCliente()">+ Novo Cliente</button></div><div class="card" id="listaClientes">Carregando...</div>`;
   const r=await apiGET('/api/clientes');
   window._clientes = r.clientes || [];
   document.getElementById('listaClientes').innerHTML=tabelaSimples(window._clientes, [
-    {chave:'nome', titulo:'Nome'}, {chave:'cpf_cnpj', titulo:'CPF/CNPJ'}, 
-    {chave:'telefone', titulo:'Telefone'}, {chave:'email', titulo:'Email'}
+    {chave:'nome', titulo:'Nome'}, {chave:'cpf_cnpj', titulo:'CPF/CNPJ'}, {chave:'telefone', titulo:'Telefone'}
   ], d=>`<button class="btn btn-secondary btn-sm" onclick="modalCliente(${d.id})">✏️ Editar</button>`);
 }
 
@@ -257,39 +253,97 @@ function modalCliente(id=null){
           <div class="form-group"><label>Telefone</label><input id="cTel" value="${cli.telefone||''}"></div>
           <div class="form-group"><label>Email</label><input id="cEmail" value="${cli.email||''}"></div>
         </div>
-        <div class="form-actions">
-          <button class="btn btn-secondary" onclick="document.querySelector('.modal-overlay').remove()">Cancelar</button>
-          <button class="btn btn-primary" onclick="salvarCliente(${id})">Salvar</button>
-        </div>
+        <div class="form-actions"><button class="btn btn-secondary" onclick="document.querySelector('.modal-overlay').remove()">Cancelar</button><button class="btn btn-primary" onclick="salvarCliente(${id})">Salvar</button></div>
       </div>
-    </div>
-  `;
+    </div>`;
 }
 
 async function salvarCliente(id){
   const payload = {
-    ...userPayload(), id: id,
-    nome: document.getElementById('cNome').value, cpf_cnpj: document.getElementById('cCpf').value,
+    ...userPayload(), id, nome: document.getElementById('cNome').value, cpf_cnpj: document.getElementById('cCpf').value,
     telefone: document.getElementById('cTel').value, email: document.getElementById('cEmail').value
   };
   const r = await apiPOST('/api/clientes/salvar', payload);
-  if(r.sucesso){ toast('Cliente salvo!'); document.querySelector('.modal-overlay').remove(); renderClientes(); }
+  if(r.sucesso){ toast('Salvo!'); document.querySelector('.modal-overlay').remove(); renderClientes(); }
   else toast(r.erro||'Erro', 'error');
 }
 
-// ===== DEMAIS TELAS E NOVAS FUNÇÕES =====
+// ===== CONFIGURAÇÃO DE INTEGRAÇÕES & APIS (MERCADO PAGO, FOCUS NFE, IFOOD) =====
+async function renderIntegracoes(){
+  const c = document.getElementById('content');
+  c.innerHTML = `
+    <h1 class="page-title">⚙️ Configuração de Integrações & APIs</h1>
+    <p class="page-sub">Gerencie credenciais de pagamento (Pix) e nota fiscal eletrônica.</p>
+    <div class="card" style="max-width:600px">
+      <div class="form-group">
+        <label>Plataforma / Serviço:</label>
+        <select id="selTipo" onchange="carregarConfigAtual()">
+          <option value="mercadopago">Mercado Pago (PIX / Cartão)</option>
+          <option value="focusnfe">Focus NFe (Nota Fiscal Eletrônica)</option>
+          <option value="ifood">iFood API</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Provedor / Nome:</label><input type="text" id="inpProvedor" placeholder="Ex: Mercado Pago"></div>
+      <div class="form-group"><label>API Key / Token de Acesso:</label><input type="password" id="inpApiKey" placeholder="Token da API"></div>
+      <div class="form-grid">
+        <div class="form-group"><label>Client ID:</label><input type="text" id="inpClientId"></div>
+        <div class="form-group"><label>Client Secret:</label><input type="password" id="inpClientSecret"></div>
+      </div>
+      <div class="form-group"><label>Extras (JSON):</label><input type="text" id="inpExtra" placeholder='{"ambiente": "homologacao"}'></div>
+      <div class="form-actions"><button class="btn btn-primary" onclick="salvarConfigIntegracao()">💾 Salvar Configuração</button></div>
+    </div>
+  `;
+  carregarConfigAtual();
+}
+
+async function carregarConfigAtual(){
+  const tipo = document.getElementById('selTipo').value;
+  const r = await apiGET('/api/bancos/config');
+  const encontrada = (r.configs || []).find(c => c.tipo === tipo);
+  if(encontrada){
+    document.getElementById('inpProvedor').value = encontrada.provedor || '';
+    document.getElementById('inpApiKey').value = encontrada.api_key || '';
+    document.getElementById('inpClientId').value = encontrada.client_id || '';
+    document.getElementById('inpClientSecret').value = encontrada.client_secret || '';
+    document.getElementById('inpExtra').value = encontrada.config_extra || '';
+  } else {
+    document.getElementById('inpProvedor').value = '';
+    document.getElementById('inpApiKey').value = '';
+    document.getElementById('inpClientId').value = '';
+    document.getElementById('inpClientSecret').value = '';
+    document.getElementById('inpExtra').value = '';
+  }
+}
+
+async function salvarConfigIntegracao(){
+  const senha = prompt("Confirme sua senha de usuário para salvar:");
+  if(!senha) return;
+  const payload = {
+    ...userPayload(), senha_usuario: senha,
+    tipo: document.getElementById('selTipo').value,
+    provedor: document.getElementById('inpProvedor').value,
+    api_key: document.getElementById('inpApiKey').value,
+    client_id: document.getElementById('inpClientId').value,
+    client_secret: document.getElementById('inpClientSecret').value,
+    config_extra: document.getElementById('inpExtra').value,
+    ativo: true
+  };
+  const r = await apiPOST('/api/bancos/config', payload);
+  if(r.sucesso){ toast('Configuração salva com sucesso!'); } else { toast(r.erro || 'Erro ao salvar', 'error'); }
+}
+
+// ===== DEMAIS TELAS =====
 async function renderDashboard(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Visão Geral</h1><div class="card" id="cx">Carregando...</div>'; const r=await apiGET('/api/dashboard/resumo'); if(!r.erro) document.getElementById('cx').innerHTML=`Vendas Hoje: <b>${fmt(r.vendas_hoje)}</b> | Estoque Baixo: <b>${r.estoque_baixo}</b>`; }
 async function renderCaixa(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Caixa / PDV</h1><div class="card" id="cx">Carregando...</div>'; const r=await apiGET('/api/caixa/status-online'); document.getElementById('cx').innerHTML='Caixas Abertos: '+(r.caixas_abertos||[]).length+' - Saldo: '+fmt(r.saldo_atual); }
 async function renderFornecedores(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Fornecedores</h1><div class="card" id="f">Carregando...</div>'; const r=await apiGET('/api/fornecedores'); document.getElementById('f').innerHTML=tabelaSimples(r.fornecedores,[{chave:'nome',titulo:'Nome'},{chave:'cnpj',titulo:'CNPJ'}]); }
-async function renderFuncionarios(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Funcionários</h1><div class="card" id="f">Carregando...</div>'; const r=await apiGET('/api/funcionarios'); document.getElementById('f').innerHTML=tabelaSimples(r.funcionarios,[{chave:'nome',titulo:'Nome'},{chave:'cargo',titulo:'Cargo'},{chave:'role',titulo:'Função'}]); }
-async function renderVendas(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Vendas</h1><div class="card" id="v">Carregando...</div>'; const r=await apiGET('/api/vendas'); document.getElementById('v').innerHTML=tabelaSimples(r.vendas,[{chave:'id',titulo:'#'},{chave:'total',titulo:'Total',render:d=>fmt(d.total)},{chave:'forma_pagamento',titulo:'Pagamento'}]); }
+async function renderFuncionarios(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Funcionários</h1><div class="card" id="f">Carregando...</div>'; const r=await apiGET('/api/funcionarios'); document.getElementById('f').innerHTML=tabelaSimples(r.funcionarios,[{chave:'nome',titulo:'Nome'},{chave:'cargo',titulo:'Cargo'}]); }
+async function renderVendas(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Vendas</h1><div class="card" id="v">Carregando...</div>'; const r=await apiGET('/api/vendas'); document.getElementById('v').innerHTML=tabelaSimples(r.vendas,[{chave:'id',titulo:'#'},{chave:'total',titulo:'Total',render:d=>fmt(d.total)}]); }
 async function renderComandas(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Comandas</h1><div class="card" id="m">Carregando...</div>'; const r=await apiGET('/api/comandas'); document.getElementById('m').innerHTML=tabelaSimples(r.comandas,[{chave:'numero',titulo:'Número'},{chave:'total',titulo:'Total',render:d=>fmt(d.total)}]); }
 async function renderEstoque(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">Estoque</h1><div class="card" id="e">Carregando...</div>'; const r=await apiGET('/api/wms/estoque'); document.getElementById('e').innerHTML=tabelaSimples(r.estoque,[{chave:'produto_nome',titulo:'Produto'},{chave:'qty',titulo:'Qtd'}]); }
 async function renderAlertasEstoque(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">🚨 Alertas Estoque Mínimo</h1><div class="card" id="a">Carregando...</div>'; const r=await apiGET('/api/wms/alertas-estoque'); document.getElementById('a').innerHTML=tabelaSimples(r.alertas||[],[{chave:'nome',titulo:'Produto'},{chave:'estoque_minimo',titulo:'Mínimo'},{chave:'estoque_atual',titulo:'Atual'},{chave:'status_estoque',titulo:'Status',render:d=>`<span class="badge ${d.status_estoque==='CRITICO'?'danger':'warn'}">${d.status_estoque}</span>`}]); }
 async function renderKDS(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">👨‍🍳 Cozinha (KDS)</h1><div id="k">Carregando...</div>'; const r=await apiGET('/api/comandas/abertas'); document.getElementById('k').innerHTML=(r.comandas||[]).map(x=>`<div class="card">Comanda #${x.numero} - ${fmt(x.total)} <button class="btn btn-primary btn-sm" onclick="toast('Pronto!')">✅ Concluir</button></div>`).join('')||'<p>Sem pedidos</p>'; }
-async function renderIntegracoes(){ const c=document.getElementById('content'); c.innerHTML='<h1 class="page-title">⚙️ Configuração de APIs</h1><div class="card"><div class="form-group"><label>Provedor (ex: Mercado Pago)</label><input id="apiProv"></div><div class="form-group"><label>Token / API Key</label><input id="apiKey" type="password"></div><div class="form-actions"><button class="btn btn-primary" onclick="toast('Configuração salva!')">Salvar API</button></div></div>'; }
 
-if(currentUser) showView('dashboard');
+if (currentUser && currentUser.matricula) showView('dashboard');
 lucide.createIcons();
 </script>
 </body>
