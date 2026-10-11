@@ -88,8 +88,11 @@ class APIHandler(BaseHTTPRequestHandler):
             return json.loads(b) if b else {}
         except: return {}
     def responder(self,d,s=200):
-        self.set_headers(s)
-        self.wfile.write(json.dumps(d,default=str,ensure_ascii=False).encode("utf-8"))
+        try:
+            self.set_headers(s)
+            self.wfile.write(json.dumps(d,default=str,ensure_ascii=False).encode("utf-8"))
+        except:
+            pass
     def log_message(self,f,*a): print(f"[{datetime.now().strftime('%H:%M:%S')}] {a[0]}",flush=True)
     def serve_static(self,nome,ctype):
         base=os.path.dirname(os.path.abspath(__file__))
