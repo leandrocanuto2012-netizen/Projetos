@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Panificadora ERP - GestÃ£o Completa</title>
+<title>Panificadora ERP - Gestao Completa</title>
 <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/lucide@1/dist/umd/lucide.min.js"></script>
@@ -543,13 +543,13 @@ function pedirSenhaAdm(titulo, extraHtml=''){
   });
 }
 async function finalizarVenda(){
-  if(!itensVendaTemp.length){ toast('Adicione itens Ã  venda','error'); return; }
+  if(!itensVendaTemp.length){ toast('Adicione itens ha venda','error'); return; }
   const balcao = document.getElementById('chkBalcao').checked;
   const comanda_id = balcao ? null : document.getElementById('vComanda').value;
-  if(!balcao && !comanda_id){ toast('Selecione o nÂº da comanda ou marque Cliente balcÃ£o','error'); return; }
+  if(!balcao && !comanda_id){ toast('Selecione o nao da comanda ou marque Cliente balcao','error'); return; }
   let senha_adm = null;
   if(balcao){
-    const ok = await pedirSenhaAdm('Venda sem comanda (balcÃ£o)');
+    const ok = await pedirSenhaAdm('Venda sem comanda (balcao)');
     if(!ok || !ok.senha){ toast('Venda cancelada: senha ADM nÃ£o informada','error'); return; }
     senha_adm = ok.senha;
   }
@@ -1105,10 +1105,10 @@ async function renderTesouraria(){
       <div class="kpi-card"><div class="kpi-icon" style="background:#dbeafe"><i data-lucide="dollar-sign" style="color:#2563eb"></i></div><div><div class="kpi-label">Saldo Atual</div><div class="kpi-value">${fmt(r.saldo_atual)}</div></div></div>
       <div class="kpi-card"><div class="kpi-icon" style="background:#fef3c7"><i data-lucide="shield-alert" style="color:#92400e"></i></div><div><div class="kpi-label">AutorizaÃ§Ãµes Pendentes</div><div class="kpi-value">${(r.autorizacoes_pendentes||[]).length}</div></div></div>
     </div>
-    <h3 style="margin:16px 0 10px;font-size:15px">Ãšltimos Movimentos</h3>
+    <h3 style="margin:16px 0 10px;font-size:15px">altos numero de Movimentos</h3>
     ${tabelaSimples(r.movimentos, [
       {chave:'tipo',titulo:'Tipo',render:d=>`<span class="badge ${d.tipo==='ENTRADA'||d.tipo==='VENDA'||d.tipo==='SUPRIMENTO'?'ok':'danger'}">${d.tipo||'-'}</span>`},
-      {chave:'descricao',titulo:'DescriÃ§Ã£o'}, {chave:'valor',titulo:'Valor',render:d=>fmt(d.valor)},
+      {chave:'descricao',titulo:'Descricao'}, {chave:'valor',titulo:'Valor',render:d=>fmt(d.valor)},
       {chave:'operator_matricula',titulo:'Operador'}, {chave:'status',titulo:'Status',render:d=>`<span class="badge ${d.status==='APROVADO'?'ok':'warn'}">${d.status||'-'}</span>`},
       {chave:'created_at',titulo:'Data',render:d=>new Date(d.created_at).toLocaleString('pt-BR')}
     ])}`;
@@ -1118,7 +1118,7 @@ async function renderTesouraria(){
 // ===== AUTORIZACOES =====
 async function renderAutorizacoes(){
   const c = document.getElementById('content');
-  c.innerHTML = `<h1 class="page-title">AutorizaÃ§Ãµes</h1><p class="page-sub">Aprove ou rejeite solicitaÃ§Ãµes pendentes.</p>
+  c.innerHTML = `<h1 class="page-title">AutorizaÃ§Ãµes</h1><p class="page-sub">Aprove ou rejeite solicitacoes pendentes.</p>
     <div class="card" id="autTable"><div class="empty-state"><i data-lucide="loader-2"></i><p>Carregando...</p></div></div>`;
   lucide.createIcons();
   const r = await apiGET('/api/autorizacoes');
@@ -1178,13 +1178,13 @@ async function salvarPonto(){
 // ===== FERIAS =====
 async function renderFerias(){
   const c = document.getElementById('content');
-  c.innerHTML = `<h1 class="page-title">FÃ©rias</h1><p class="page-sub">Controle de fÃ©rias dos funcionÃ¡rios.</p>
+  c.innerHTML = `<h1 class="page-title">FÃ©rias</h1><p class="page-sub">Controle de ferias dos funcionarios.</p>
     <div class="card"><button class="btn btn-primary" onclick="modalFerias()"><i data-lucide="plus"></i> Registrar FÃ©rias</button></div>
     <div class="card" id="feriasTable"><div class="empty-state"><i data-lucide="loader-2"></i><p>Carregando...</p></div></div>`;
   lucide.createIcons();
   const r = await apiGET('/api/rh/ferias');
   document.getElementById('feriasTable').innerHTML = tabelaSimples(r.ferias, [
-    {chave:'funcionario_matricula',titulo:'MatrÃ­cula'}, {chave:'inicio',titulo:'InÃ­cio'},
+    {chave:'funcionario_matricula',titulo:'MatrÃ­cula'}, {chave:'inicio',titulo:'Ini­cio'},
     {chave:'fim',titulo:'Fim'}, {chave:'dias',titulo:'Dias'},
     {chave:'status',titulo:'Status',render:d=>`<span class="badge ${d.status==='APROVADO'?'ok':'warn'}">${d.status||'-'}</span>`}
   ]);
@@ -1207,7 +1207,7 @@ async function salvarFerias(){
   const r = await apiPOST('/api/rh/ferias/registrar', {...userPayload(),
     funcionario_matricula:document.getElementById('feMat').value, inicio:document.getElementById('feIni').value,
     fim:document.getElementById('feFim').value, dias:document.getElementById('feDias').value});
-  if(r.sucesso){ toast('FÃ©rias registradas!'); document.querySelector('.modal-overlay').remove(); renderFerias(); }
+  if(r.sucesso){ toast('Ferias registradas!'); document.querySelector('.modal-overlay').remove(); renderFerias(); }
   else toast(r.erro||'Erro','error');
 }
 
@@ -1232,11 +1232,11 @@ function modalHolerite(){
   document.getElementById('modalContainer').innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)this.remove()">
     <div class="modal"><h3><i data-lucide="file-badge"></i> Gerar Holerite</h3>
       <div class="form-grid">
-        <div class="form-group"><label>MatrÃ­cula</label><input id="hoMat"></div>
-        <div class="form-group"><label>CompetÃªncia</label><input id="hoComp" placeholder="2026-10"></div>
-        <div class="form-group"><label>SalÃ¡rio Base</label><input id="hoBase" type="number" step="0.01" value="1500"></div>
+        <div class="form-group"><label>Matricula</label><input id="hoMat"></div>
+        <div class="form-group"><label>Competencia</label><input id="hoComp" placeholder="2026-10"></div>
+        <div class="form-group"><label>Salario Base</label><input id="hoBase" type="number" step="0.01" value="1500"></div>
         <div class="form-group"><label>Descontos</label><input id="hoDesc" type="number" step="0.01" value="0"></div>
-        <div class="form-group"><label>LÃ­quido</label><input id="hoLiq" type="number" step="0.01" value="1500"></div>
+        <div class="form-group"><label>Liquido</label><input id="hoLiq" type="number" step="0.01" value="1500"></div>
       </div>
       <div class="form-actions"><button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
       <button class="btn btn-primary" onclick="salvarHolerite()"><i data-lucide="save"></i> Salvar</button></div></div></div>`;
@@ -1291,7 +1291,7 @@ async function salvarLogistica(){
 }
 async function concluirLog(id){
   const r = await apiPOST('/api/logistica/concluir', {...userPayload(), logistica_id:id});
-  if(r.sucesso){ toast('Entrega concluÃ­da!'); renderLogistica(); } else toast(r.erro||'Erro','error');
+  if(r.sucesso){ toast('Entrega concluida!'); renderLogistica(); } else toast(r.erro||'Erro','error');
 }
 
 // ===== GRID 1: BOT CONFIG =====
@@ -1317,7 +1317,7 @@ async function renderBotConfig(){
   lucide.createIcons();
   const r = await apiGET('/api/bot/config');
   const form = document.getElementById('botConfigForm');
-  const campos = {nome_bot:'Nome do Bot', saudacao:'SaudaÃ§Ã£o Inicial', horario_atendimento:'HorÃ¡rio de Atendimento', endereco:'EndereÃ§o'};
+  const campos = {nome_bot:'Nome do Bot', saudacao:'Saudacao Inicial', horario_atendimento:'Horario de Atendimento', endereco:'EndereÃ§o'};
   const cfg = {};
   (r.config_geral||[]).forEach(g=>cfg[g.nome]=g.valor);
   form.innerHTML = Object.entries(campos).map(([k,label])=>
@@ -1371,11 +1371,11 @@ async function testarBot(){
 // ===== GRID 2: GERENTE AMBIENTE =====
 async function renderGerente(){
   const c = document.getElementById('content');
-  c.innerHTML = `<h1 class="page-title">Grid 2 â€” Gerente do Ambiente</h1><p class="page-sub">Monitoramento dos 14 mÃ³dulos e alertas automÃ¡ticos.</p>
+  c.innerHTML = `<h1 class="page-title">Grid 2 â€” Gerente do Ambiente</h1><p class="page-sub">Monitoramento dos 14 modulos e alertas automaticos.</p>
     <div class="kpi-grid" id="gerenteKpis"></div>
     <div class="grid-2">
       <div class="card"><div class="card-title"><i data-lucide="bell-ring"></i> Alertas Ativos</div><div id="gerenteAlertas" style="margin-top:14px"></div></div>
-      <div class="card"><div class="card-title"><i data-lucide="bar-chart-3"></i> RelatÃ³rio de Vendas (7 dias)</div><div class="chart-container" id="gerenteChart" style="height:280px"></div></div>
+      <div class="card"><div class="card-title"><i data-lucide="bar-chart-3"></i> Relatorio de Vendas (7 dias)</div><div class="chart-container" id="gerenteChart" style="height:280px"></div></div>
     </div>`;
   lucide.createIcons();
   const st = await apiGET('/api/gerente/status-modulos');
