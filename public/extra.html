@@ -1,4 +1,9 @@
-<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Extra</title>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Extra - Panificadora ERP</title>
 <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#f1f5f9;--card:#fff;--text:#0f172a;--muted:#64748b;--accent:#16a34a;--border:#e2e8f0;--header:#1e293b}
@@ -15,54 +20,111 @@ table.data th{text-align:left;padding:8px;border-bottom:2px solid var(--border);
 table.data td{padding:8px;border-bottom:1px solid var(--border)}
 .preview{background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:10px;margin-top:10px}
 @media print{.topbar,.tabs,.noprint{display:none!important}}
-</style></head><body>
+</style>
+</head>
+<body>
 <div class="topbar"><button onclick="location.href='/admin'">← Dashboard</button><div>Extra</div></div>
-<div class="wrap"><div class="tabs">
-<button onclick="aba('bancos')">Bancos</button><button onclick="aba('nf')">NF</button><button onclick="aba('dre')">DRE</button><button onclick="aba('agenda')">Agenda</button><button onclick="aba('arq')">Arquivos</button><button onclick="aba('ponto')">Ponto</button><button onclick="aba('integ')">Integrações</button><button onclick="aba('comparar')">Comparar</button><button onclick="aba('audit')">Auditoria</button><button onclick="aba('fat')">Faturamento</button><button onclick="aba('cont')">Contratos</button><button onclick="aba('rel')">Relatórios</button><button onclick="aba('prod')">Produção</button>
-</div><div id="tela" class="card">...</div></div>
+<div class="wrap">
+<div class="tabs">
+<button onclick="aba('bancos')">Bancos</button>
+<button onclick="aba('nf')">NF</button>
+<button onclick="aba('dre')">DRE</button>
+<button onclick="aba('agenda')">Agenda</button>
+<button onclick="aba('arq')">Arquivos</button>
+<button onclick="aba('ponto')">Ponto</button>
+<button onclick="aba('integ')">Integrações</button>
+<button onclick="aba('comparar')">Comparar</button>
+<button onclick="aba('audit')">Auditoria</button>
+<button onclick="aba('fat')">Faturamento</button>
+<button onclick="aba('cont')">Contratos</button>
+<button onclick="aba('rel')">Relatórios</button>
+<button onclick="aba('prod')">Produção</button>
+</div>
+<div id="tela" class="card">...</div>
+</div>
 <script>
-const B=location.origin;
-async function GET(p){const r=await fetch(B+p);return await r.json();}
-async function POST(p,d){const r=await fetch(B+p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});return await r.json();}
-function fmt(v){return 'R$ '+parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2});}
-function aba(t){try{location.hash=t;}catch(e){}if(t=='bancos')telaBancos();if(t=='nf')telaNF();if(t=='dre')telaDRE();if(t=='agenda')telaAgenda();if(t=='arq')telaArq();if(t=='ponto')telaPonto();if(t=='integ')telaInteg();if(t=='comparar')telaComparar();if(t=='audit')telaAudit();if(t=='fat')telaFat();if(t=='cont')telaCont();if(t=='rel')telaRel();if(t=='prod')telaProd();}
-function tabela(h,r){if(!r||!r.length)return '<p>Nenhum</p>';return '<table class="data"><thead><tr>'+h.map(x=>'<th>'+x+'</th>').join('')+'</tr></thead><tbody>'+r.map(x=>'<tr>'+x.map(c=>'<td>'+c+'</td>').join('')+'</tr>').join('')+'</tbody></table>';}
-async function telaBancos(){document.getElementById('tela').innerHTML='<h3>Bancos</h3><div id="lc"></div>Banco<input id="bc"><button class="btn" onclick="saveBanco()">Salvar</button>';const r=await GET('/api/bancos/vinculos');document.getElementById('lc').innerHTML=tabela(['Banco'],(r.contas||[]).map(x=>[x.banco]));}
-async function saveBanco(){await POST('/api/bancos/conta',{banco:bc.value,ag_conta:ag.value});telaBancos();}
-async function telaNF(){document.getElementById('tela').innerHTML='<h3>NF</h3><select id="nt"><option>ENTRADA</option><option>SAIDA</option></select><input id="nn"><input id="nv" type="number"><button class="btn" onclick="saveNF()">Emitir</button>';}
-async function saveNF(){await POST('/api/nf/criar',{tipo:nt.value,numero:nn.value,total:nv.value});telaNF();}
-async function telaDRE(){document.getElementById('tela').innerHTML='<h3>DRE</h3><div id="dre"></div>';const r=await GET('/api/dre_resumo');document.getElementById('dre').innerHTML=JSON.stringify(r);}
-async function telaAgenda(){document.getElementById('tela').innerHTML='<h3>Agenda</h3><input id="et"><input id="ei" type="datetime-local"><button class="btn" onclick="saveEv()">Salvar</button>';}
-async function saveEv(){await POST('/api/agenda/criar',{titulo:et.value,inicio:ei.value});telaAgenda();}
-async function telaArq(){document.getElementById('tela').innerHTML='<h3>Arquivos</h3><input id="af" type="file"><button class="btn" onclick="saveAr()">Upload</button>';}
-async function saveAr(){const f=af.files[0];const fd=new FormData();fd.append('file',f);await fetch(B+'/api/arquivos/upload',{method:'POST',body:fd});telaArq();}
-async function telaPonto(){document.getElementById('tela').innerHTML='<h3>Ponto Completo</h3><div id="lp"></div>Mat<input id="pm" size="8">Data<input id="pd" type="date"><button class="btn" onclick="savePt()">Registrar</button>';const r=await GET('/api/rh/ponto_calc');document.getElementById('lp').innerHTML=tabela(['Data','Mat'],(r.ponto||[]).map(x=>[x.data,x.funcionario_matricula]));}
-async function savePt(){await POST('/api/rh/ponto/registrar2',{funcionario_matricula:pm.value,data:pd.value});telaPonto();}
-async function telaInteg(){document.getElementById('tela').innerHTML='<h3>Integracoes</h3>Tipo<select id="it"><option>BANCO</option><option>IFOOD</option></select>Prov<input id="ip"><button class="btn" onclick="saveIn()">Salvar</button>';}
-async function saveIn(){await POST('/api/bancos/config',{tipo:it.value,provedor:ip.value});telaInteg();}
-async function telaComparar(){document.getElementById('tela').innerHTML='<h3>Comparar</h3>';}
-async function telaAudit(){document.getElementById('tela').innerHTML='<h3>Auditoria</h3><button class="btn" onclick="window.print()">Imprimir</button>';}
-async function telaFat(){document.getElementById('tela').innerHTML='<h3>Faturamento</h3>';}
-async function telaCont(){document.getElementById('tela').innerHTML='<h3>Contratos</h3>Cliente<input id="cc">Valor<input id="cv" type="number"><button class="btn" onclick="saveC()">Salvar</button>';}
-async function saveC(){await POST('/api/contratos/criar',{cliente:cc.value,valor:cv.value,tipos:['PRESTACAO_SERVICOS']});telaCont();}
-async function telaRel(){document.getElementById('tela').innerHTML='<h3>Relatorios</h3>';}
+const B = location.origin;
+async function GET(p){ const r = await fetch(B+p); return await r.json(); }
+async function POST(p,d){ const r = await fetch(B+p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}); return await r.json(); }
+function fmt(v){ return 'R$ '+parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2}); }
+function aba(t){
+  try{ location.hash=t; }catch(e){}
+  if(t=='bancos') telaBancos();
+  if(t=='nf') telaNF();
+  if(t=='dre') telaDRE();
+  if(t=='agenda') telaAgenda();
+  if(t=='arq') telaArq();
+  if(t=='ponto') telaPonto();
+  if(t=='integ') telaInteg();
+  if(t=='comparar') telaComparar();
+  if(t=='audit') telaAudit();
+  if(t=='fat') telaFat();
+  if(t=='cont') telaCont();
+  if(t=='rel') telaRel();
+  if(t=='prod') telaProd();
+}
+function tabela(h,r){
+  if(!r||!r.length) return '<p>Nenhum</p>';
+  let s='<table class="data"><thead><tr>';
+  h.forEach(x=> s+='<th>'+x+'</th>');
+  s+='</tr></thead><tbody>';
+  r.forEach(row=>{ s+='<tr>'; row.forEach(c=> s+='<td>'+c+'</td>'); s+='</tr>'; });
+  s+='</tbody></table>'; return s;
+}
+async function telaBancos(){
+  document.getElementById('tela').innerHTML='<h3>Bancos</h3><div id="lc"></div>Banco<input id="bc"><input id="ag" placeholder="ag/conta"><button class="btn" onclick="saveBanco()">Salvar</button>';
+  const r=await GET('/api/bancos/vinculos');
+  document.getElementById('lc').innerHTML=tabela(['Banco'],(r.contas||[]).map(x=>[x.banco]));
+}
+async function saveBanco(){ await POST('/api/bancos/conta',{banco:document.getElementById('bc').value,ag_conta:document.getElementById('ag').value}); telaBancos(); }
+async function telaNF(){
+  document.getElementById('tela').innerHTML='<h3>NF</h3><select id="nt"><option>ENTRADA</option><option>SAIDA</option></select><input id="nn" placeholder="num"><input id="nv" type="number"><button class="btn" onclick="saveNF()">Emitir</button><div id="ln"></div>';
+  const r=await GET('/api/nf_lista');
+  document.getElementById('ln').innerHTML=tabela(['Tipo','Num'],(r.notas||[]).map(x=>[x.tipo,x.numero]));
+}
+async function saveNF(){ await POST('/api/nf/criar',{tipo:nt.value,numero:nn.value,total:nv.value}); telaNF(); }
+async function telaDRE(){ document.getElementById('tela').innerHTML='<h3>DRE</h3><div id="dre"></div>'; const r=await GET('/api/dre_resumo'); document.getElementById('dre').innerHTML=JSON.stringify(r); }
+async function telaAgenda(){ document.getElementById('tela').innerHTML='<h3>Agenda</h3><input id="et"><input id="ei" type="datetime-local"><button class="btn" onclick="saveEv()">Salvar</button>'; }
+async function saveEv(){ await POST('/api/agenda/criar',{titulo:et.value,inicio:ei.value}); telaAgenda(); }
+async function telaArq(){ document.getElementById('tela').innerHTML='<h3>Arquivos</h3><input id="af" type="file"><button class="btn" onclick="saveAr()">Upload</button>'; }
+async function saveAr(){ const f=af.files[0]; const fd=new FormData(); fd.append('file',f); await fetch(B+'/api/arquivos/upload',{method:'POST',body:fd}); telaArq(); }
+async function telaPonto(){
+  document.getElementById('tela').innerHTML='<h3>Ponto Completo</h3><div id="lp"></div>Mat<input id="pm" size="8">Data<input id="pd" type="date">Ent<input id="pe" type="time" value="08:00">Sai<input id="ps" type="time" value="17:00"><button class="btn" onclick="savePt()">Registrar</button>';
+  const r=await GET('/api/rh/ponto_calc');
+  document.getElementById('lp').innerHTML=tabela(['Data','Mat'],(r.ponto||[]).map(x=>[x.data,x.funcionario_matricula]));
+}
+async function savePt(){ await POST('/api/rh/ponto/registrar2',{funcionario_matricula:pm.value,data:pd.value,entrada:pe.value,saida:ps.value}); telaPonto(); }
+async function telaInteg(){ document.getElementById('tela').innerHTML='<h3>Integrações TRIO</h3>Tipo<select id="it"><option>BANCO</option><option>IFOOD</option></select>Prov<input id="ip"><button class="btn" onclick="saveIn()">Salvar</button>'; }
+async function saveIn(){ await POST('/api/bancos/config',{tipo:it.value,provedor:ip.value}); telaInteg(); }
+async function telaComparar(){ document.getElementById('tela').innerHTML='<h3>Comparar Loja x iFood x Site</h3>'; }
+async function telaAudit(){ document.getElementById('tela').innerHTML='<h3>Auditoria</h3><button class="btn" onclick="window.print()">Imprimir</button><div id="a"></div>'; const r=await GET('/api/auditoria_resumo'); document.getElementById('a').innerHTML='Vendas '+(r.vendas||[]).length; }
+async function telaFat(){ document.getElementById('tela').innerHTML='<h3>Faturamento</h3><div id="ff"></div>'; const c=await GET('/api/contas'); document.getElementById('ff').innerHTML=tabela(['Pessoa','Valor'],(c.contas||[]).map(x=>[x.pessoa,fmt(x.valor)])); }
+async function telaCont(){
+  document.getElementById('tela').innerHTML='<h3>Contratos</h3>Cliente<input id="cc">Valor<input id="cv" type="number"><button class="btn" onclick="saveC()">Salvar</button><div id="pct"></div>';
+}
+async function saveC(){ const r=await POST('/api/contratos/criar',{cliente:cc.value,valor:cv.value,tipos:['PRESTACAO_SERVICOS']}); document.getElementById('pct').innerHTML=r.texto||JSON.stringify(r); }
+async function telaRel(){ document.getElementById('tela').innerHTML='<h3>Relatórios</h3><div id="rp"></div>'; const v=await GET('/api/vendas'); document.getElementById('rp').innerHTML=tabela(['ID','Total'],(v.vendas||[]).map(x=>[x.id,fmt(x.total)])); }
 async function telaProd(){
- document.getElementById('tela').innerHTML='<h3>Produção - acompanhamento</h3><label><input type="checkbox" id="prodAdm" checked onchange="verProd()"> ADM completo</label> Minha mat<input id="pminhamat" size="8"><button class="btn" onclick="verProd()">Ver</button><div class="preview">Novo: Produto<input id="ppnome" size="10"> Qtd<input id="ppqtd" type="number" size="4"> Resp<input id="ppresp" size="8"> Mat<input id="ppmat" size="6"> Fim<input id="ppfim" type="datetime-local"> Custo<input id="ppcusto" type="number" size="5"> Preco<input id="pppreco" type="number" size="5"><button class="btn" onclick="iniciaProd()">Iniciar</button></div><div id="pplist"></div>';
- verProd();
+  document.getElementById('tela').innerHTML='<h3>Produção - acompanhamento</h3><label><input type="checkbox" id="prodAdm" checked onchange="verProd()"> ADM completo</label> Minha mat<input id="pminhamat" size="8"><button class="btn" onclick="verProd()">Ver</button><div class="preview">Novo: Produto<input id="ppnome" size="10"> Qtd<input id="ppqtd" type="number" size="4"> Resp<input id="ppresp" size="8"> Mat<input id="ppmat" size="6"> Fim<input id="ppfim" type="datetime-local"> Custo<input id="ppcusto" type="number" size="5"> Preco<input id="pppreco" type="number" size="5"><button class="btn" onclick="iniciaProd()">Iniciar</button></div><div id="pplist"></div>';
+  verProd();
 }
 async function verProd(){
- const r=await GET('/api/producao/acompanhamento');let orders=r.ordens||[];let adm=document.getElementById('prodAdm').checked;let minha=document.getElementById('pminhamat').value;
- if(!adm&&minha) orders=orders.filter(o=>o.responsavel_matricula==minha);
- let h='<table class="data"><tr><th>Produzindo</th><th>Pronta/Meta</th><th>Quem</th><th>Horario</th><th>Gastou</th><th>Termina</th><th>Lucro est</th><th></th></tr>';
- orders.forEach(o=>{
-  let lucro=parseFloat(o.qtd_meta||0)*parseFloat(o.preco_un||0)-parseFloat(o.custo_insumos||0);
-  if(!adm) h+='<tr><td>'+o.produto_nome+'</td><td>'+o.qtd_pronta+'/'+o.qtd_meta+'</td><td>'+o.responsavel_nome+'</td><td>'+(o.inicio||'').slice(0,16)+'</td><td>-</td><td>-</td><td>-</td><td><button class="btn" onclick="atualizaProd('+o.id+')">Atualizar</button></td></tr>';
-  else h+='<tr><td>'+o.produto_nome+'</td><td>'+o.qtd_pronta+'/'+o.qtd_meta+'</td><td>'+o.responsavel_nome+'</td><td>'+(o.inicio||'').slice(0,16)+'</td><td>'+fmt(o.custo_insumos)+'</td><td>'+(o.previsao_fim||'').slice(0,16)+'</td><td>'+fmt(lucro)+'</td><td><button class="btn" onclick="atualizaProd('+o.id+')">+Qtd</button><button class="btn" onclick="concluiProd('+o.id+')">Concluir</button></td></tr>';
- });
- h+='</table>';document.getElementById('pplist').innerHTML=h;
+  const r=await GET('/api/producao/acompanhamento');
+  let orders=r.ordens||[];
+  let adm=document.getElementById('prodAdm').checked;
+  let minha=document.getElementById('pminhamat').value;
+  if(!adm && minha) orders=orders.filter(o=>o.responsavel_matricula==minha);
+  let h='<table class="data"><tr><th>Produzindo</th><th>Pronta/Meta</th><th>Quem</th><th>Horario</th><th>Gastou</th><th>Termina</th><th>Lucro est</th><th></th></tr>';
+  orders.forEach(o=>{
+    let lucro=parseFloat(o.qtd_meta||0)*parseFloat(o.preco_un||0)-parseFloat(o.custo_insumos||0);
+    if(!adm){ h+='<tr><td>'+o.produto_nome+'</td><td>'+o.qtd_pronta+'/'+o.qtd_meta+'</td><td>'+o.responsavel_nome+'</td><td>'+(o.inicio||'').slice(0,16)+'</td><td>-</td><td>-</td><td>-</td><td><button class="btn" onclick="atualizaProd('+o.id+')">Atualizar</button></td></tr>'; }
+    else{ h+='<tr><td>'+o.produto_nome+'</td><td>'+o.qtd_pronta+'/'+o.qtd_meta+'</td><td>'+o.responsavel_nome+'</td><td>'+(o.inicio||'').slice(0,16)+'</td><td>'+fmt(o.custo_insumos)+'</td><td>'+(o.previsao_fim||'').slice(0,16)+'</td><td>'+fmt(lucro)+'</td><td><button class="btn" onclick="atualizaProd('+o.id+')">+Qtd</button></td></tr>'; }
+  });
+  h+='</table>'; document.getElementById('pplist').innerHTML=h;
 }
-async function iniciaProd(){await POST('/api/producao/iniciar',{produto_nome:ppnome.value,qtd_meta:ppqtd.value,responsavel_nome:ppresp.value,responsavel_matricula:ppmat.value,previsao_fim:ppfim.value,custo_insumos:ppcusto.value,preco_un:pppreco.value});telaProd();}
-async function atualizaProd(id){let q=prompt('Qtd pronta?');await POST('/api/producao/atualizar',{id:id,qtd_pronta:q});verProd();}
-async function concluiProd(id){await POST('/api/producao/concluir',{id:id});verProd();}
-let h=location.hash.replace('#','');if(h)aba(h);else telaProd();
-</script></body></html>
+async function iniciaProd(){ await POST('/api/producao/iniciar',{produto_nome:ppnome.value,qtd_meta:ppqtd.value,responsavel_nome:ppresp.value,responsavel_matricula:ppmat.value,previsao_fim:ppfim.value,custo_insumos:ppcusto.value,preco_un:pppreco.value}); telaProd(); }
+async function atualizaProd(id){ let q=prompt('Qtd pronta?'); await POST('/api/producao/atualizar',{id:id,qtd_pronta:q}); verProd(); }
+let h=location.hash.replace('#',''); if(h) aba(h); else telaProd();
+</script>
+</body>
+</html>
