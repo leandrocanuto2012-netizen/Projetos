@@ -165,6 +165,20 @@ class APIHandler(BaseHTTPRequestHandler):
                     if ano and mes:
                         pref=f"{ano}-{str(mes).zfill(2)}"; evs=[e for e in evs if str(e.get("inicio") or "").startswith(pref)]
                     return self.responder({"eventos":evs})
+                    if path=="/api/faturamento_resumo":
+                    try:
+                        cur.execute("SELECT COALESCE(SUM(total),0) AS t FROM vendas"); tv=float((cur.fetchone() or {}).get("t",0) or 0)
+                    except: tv=0
+                    try:
+                        cur.execute("SELECT COALESCE(SUM(total),0) AS t FROM notas_fiscais WHERE tipo='SAIDA'"); tn=float((cur.fetchone() or {}).get("t",0) or 0)
+                    except: tn=0
+                    try:
+                        cur.execute("SELECT COALESCE(SUM(total),0) AS t FROM site_pedidos WHERE status!='CANCELADO'"); ts=float((cur.fetchone() or {}).get("t",0) or 0)
+                    except: ts=0
+                    return self.responder({"vendas":tv,"notas":tn,"site":ts,"total":tv+tn+ts})
+                if path=="/api/contratos_lista": return self.responder({"contratos":sel("SELECT * FROM contratos ORDER BY id DESC LIMIT 100")})
+                if path=="/api/auditoria_resumo":
+                    return self.responder({"vendas":sel("SELECT id,total,status FROM vendas ORDER BY id DESC LIMIT 200"),"pedidos":sel("SELECT id,cliente_nome,total,status FROM site_pedidos ORDER BY id DESC LIMIT 200"),"produtos":sel("SELECT id,nome,status FROM produtos LIMIT 200")})
                 if path=="/api/rh/ponto_calc": return self.responder({"ponto":sel("SELECT * FROM ponto_registros ORDER BY data DESC LIMIT 500"),"ajustes":sel("SELECT * FROM ponto_ajustes ORDER BY id DESC LIMIT 200"),"atestados":sel("SELECT * FROM atestados ORDER BY data DESC LIMIT 200"),"funcionarios":sel("SELECT matricula,nome,salario FROM funcionarios ORDER BY nome")})
                 if path=="/api/dashboard/resumo":
                     try:
