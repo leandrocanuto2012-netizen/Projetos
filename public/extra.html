@@ -1,61 +1,32 @@
-<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Extra - Panificadora</title>
-<style>body{font-family:Arial;background:#f1f5f9;margin:0;padding:10px}button{padding:8px 12px;margin:4px;background:#16a34a;color:#fff;border:0;border-radius:6px}input,select{padding:7px;margin:3px;border:1px solid #ccc;border-radius:5px}.card{background:#fff;padding:12px;border-radius:8px;margin:10px 0}table{width:100%;background:#fff;border-collapse:collapse;font-size:13px}td,th{border:1px solid #ddd;padding:6px}.tabs{display:flex;gap:4px;flex-wrap:wrap}</style></head><body>
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Extra</title>
+<style>body{font-family:Arial;background:#f1f5f9;padding:10px}button{padding:8px 12px;margin:4px;background:#16a34a;color:#fff;border:0;border-radius:6px}input,select{padding:7px;margin:3px;border:1px solid #ccc;border-radius:5px}.card{background:#fff;padding:12px;border-radius:8px;margin:10px 0}table{width:100%;background:#fff;border-collapse:collapse;font-size:12px}td,th{border:1px solid #ddd;padding:5px}</style></head><body>
 <h2>Extra - sem mexer no dashboard</h2>
-<div class="tabs">
-<button onclick="aba('bancos')">Vincular Bancos</button>
-<button onclick="aba('nf')">NF Entrada/Saida</button>
-<button onclick="aba('dre')">DRE + Simulador</button>
-<button onclick="aba('agenda')">Agenda</button>
-<button onclick="aba('arq')">Arquivos</button>
-<button onclick="aba('ponto')">Ponto</button>
-</div>
-<div id="tela" class="card">Carregando...</div>
+<div><button onclick="aba('bancos')">Bancos</button><button onclick="aba('nf')">NF</button><button onclick="aba('dre')">DRE</button><button onclick="aba('agenda')">Agenda</button><button onclick="aba('arq')">Arquivos</button><button onclick="aba('ponto')">Ponto</button><button onclick="aba('bot')">Bot Celular</button></div>
+<div id="tela" class="card">...</div>
 <script>
 const B=location.origin;
 async function GET(p){return await fetch(B+p).then(r=>r.json());}
 async function POST(p,d){return await fetch(B+p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}).then(r=>r.json());}
-function aba(t){
- if(t=='bancos') telaBancos();
- if(t=='nf') telaNF();
- if(t=='dre') telaDRE();
- if(t=='agenda') telaAgenda();
- if(t=='arq') telaArq();
- if(t=='ponto') telaPonto();
-}
-async function telaBancos(){
- document.getElementById('tela').innerHTML='<h3>Vincular Bancos</h3><div id="lc">...</div><p>Banco <input id="bc" placeholder="Inter, Nubank"><input id="ag" placeholder="ag/conta"><button onclick="saveBanco()">Salvar conta</button></p><p>Maquininha <select id="op"><option>Cielo</option><option>Rede</option><option>Stone</option></select><input id="tx" value="1.99"><button onclick="saveMaq()">Salvar maq</button></p><p>iFood Total <input id="ift" type="number"><button onclick="syncIf()">Puxar iFood</button></p><p>Boleto Cliente <input id="blp"><input id="blv" type="number"><input id="bld" type="date"><button onclick="gerBl()">Gerar boleto</button></p><div id="blo"></div>';
- const r=await GET('/api/bancos/vinculos');
- document.getElementById('lc').innerHTML='Contas:'+JSON.stringify(r.contas||[])+'<br>Maq:'+JSON.stringify(r.maquininhas||[])+'<br>iFood:'+JSON.stringify(r.ifood||[]);
-}
+function aba(t){if(t=='bancos')telaBancos();if(t=='nf')telaNF();if(t=='dre')telaDRE();if(t=='agenda')telaAgenda();if(t=='arq')telaArq();if(t=='ponto')telaPonto();if(t=='bot')telaBot();}
+async function telaBancos(){document.getElementById('tela').innerHTML='<h3>Vincular Bancos</h3><div id="lc">...</div>Banco <input id="bc"><input id="ag" placeholder="ag/conta"><button onclick="saveBanco()">Salvar</button><br>Maq <select id="op"><option>Cielo</option><option>Rede</option><option>Stone</option></select><input id="tx" value="1.99" size="5"><button onclick="saveMaq()">Salvar maq</button><br>iFood Total <input id="ift" type="number" size="6"><button onclick="syncIf()">Puxar</button><br>Boleto <input id="blp" placeholder="cliente"><input id="blv" type="number" placeholder="valor"><input id="bld" type="date"><button onclick="gerBl()">Gerar</button><div id="blo"></div>';const r=await GET('/api/bancos/vinculos');document.getElementById('lc').innerHTML='Contas:'+JSON.stringify(r.contas||[]).slice(0,1000);}
 async function saveBanco(){await POST('/api/bancos/conta',{banco:bc.value,ag_conta:ag.value});telaBancos();}
 async function saveMaq(){await POST('/api/bancos/maquininha',{operadora:op.value,taxa:tx.value});telaBancos();}
 async function syncIf(){const r=await POST('/api/ifood/sync',{total:ift.value});alert('pedido '+r.pedido_id);telaBancos();}
-async function gerBl(){const r=await POST('/api/boletos/gerar',{pessoa:blp.value,valor:blv.value,vencimento:bld.value});document.getElementById('blo').innerHTML='Link:'+r.link+' Linha:'+r.linha_digitavel;}
-async function telaNF(){
- document.getElementById('tela').innerHTML='<h3>NF Entrada/Saida + contabiliza</h3>Tipo<select id="nt"><option>ENTRADA</option><option>SAIDA</option></select> Num<input id="nn"> Pessoa<input id="np"> Total<input id="nv" type="number"> ICMS<input id="ni" value="18"> PIS<input id="npi" value="1.65"> COFINS<input id="nc" value="7.6"> ISS<input id="ns" value="5"><button onclick="saveNF()">Emitir</button><div id="ln"></div>';
- const r=await GET('/api/nf_lista');document.getElementById('ln').innerHTML=JSON.stringify(r.notas||[]).slice(0,2000);
-}
-async function saveNF(){const r=await POST('/api/nf/criar',{tipo:nt.value,numero:nn.value,pessoa:np.value,total:nv.value,aliq_icms:ni.value,aliq_pis:npi.value,aliq_cofins:nc.value,aliq_iss:ns.value});alert('impostos '+r.impostos);telaNF();}
-async function telaDRE(){
- document.getElementById('tela').innerHTML='<h3>DRE + Simulador PIS COFINS ICMS ISS</h3><button onclick="verDRE()">Ver DRE real</button><div id="dre"></div><hr>Fat<input id="sf" value="100000"> Custo<input id="sc" value="40000"> Regime<select id="sr"><option>SIMPLES</option><option>PRESUMIDO</option><option>REAL</option></select><button onclick="sim()">Simular</button><div id="simo"></div>';
-}
-async function verDRE(){const r=await GET('/api/dre_resumo');document.getElementById('dre').innerHTML='Receita '+r.receita+' Imp '+r.impostos+' Lucro '+r.lucro;}
-async function sim(){const r=await POST('/api/dre/simular',{faturamento:sf.value,custo:sc.value,regime:sr.value});document.getElementById('simo').innerHTML='PIS '+r.pis+' COFINS '+r.cofins+' ICMS '+r.icms+' ISS '+r.iss+' LUCRO '+r.lucro;}
-async function telaAgenda(){
- document.getElementById('tela').innerHTML='<h3>Agenda tipo Google</h3>Titulo<input id="et"> Inicio<input id="ei" type="datetime-local"> Fim<input id="ef" type="datetime-local"><button onclick="saveEv()">Agendar</button><div id="la"></div>';
- const r=await GET('/api/agenda_lista');document.getElementById('la').innerHTML=JSON.stringify(r.eventos||[]);
-}
+async function gerBl(){const r=await POST('/api/boletos/gerar',{pessoa:blp.value,valor:blv.value,vencimento:bld.value});document.getElementById('blo').innerHTML=r.link+' '+r.linha_digitavel;}
+async function telaNF(){document.getElementById('tela').innerHTML='<h3>NF Entrada/Saida</h3><select id="nt"><option>ENTRADA</option><option>SAIDA</option></select><input id="nn" placeholder="num" size="6"><input id="np" placeholder="pessoa"><input id="nv" type="number" placeholder="total"><br>ICMS<input id="ni" value="18" size="4">PIS<input id="npi" value="1.65" size="4">COF<input id="nc" value="7.6" size="4">ISS<input id="ns" value="5" size="4"><button onclick="saveNF()">Emitir</button><div id="ln"></div>';const r=await GET('/api/nf_lista');document.getElementById('ln').innerHTML=JSON.stringify(r.notas||[]).slice(0,2000);}
+async function saveNF(){const r=await POST('/api/nf/criar',{tipo:nt.value,numero:nn.value,pessoa:np.value,total:nv.value,aliq_icms:ni.value,aliq_pis:npi.value,aliq_cofins:nc.value,aliq_iss:ns.value});alert('imp '+r.impostos);telaNF();}
+async function telaDRE(){document.getElementById('tela').innerHTML='<h3>DRE</h3><button onclick="verDRE()">Ver DRE</button><div id="dre"></div>Fat<input id="sf" value="100000" size="7">Custo<input id="sc" value="40000" size="7"><select id="sr"><option>SIMPLES</option><option>PRESUMIDO</option><option>REAL</option></select><button onclick="sim()">Simular</button><div id="simo"></div>';}
+async function verDRE(){const r=await GET('/api/dre_resumo');document.getElementById('dre').innerHTML='Rec '+r.receita+' Imp '+r.impostos+' Lucro '+r.lucro;}
+async function sim(){const r=await POST('/api/dre/simular',{faturamento:sf.value,custo:sc.value,regime:sr.value});document.getElementById('simo').innerHTML='PIS '+r.pis+' COF '+r.cofins+' ICMS '+r.icms+' ISS '+r.iss+' LUCRO '+r.lucro;}
+async function telaAgenda(){document.getElementById('tela').innerHTML='<h3>Agenda</h3>Tit<input id="et">Ini<input id="ei" type="datetime-local">Fim<input id="ef" type="datetime-local"><button onclick="saveEv()">Agendar</button><div id="la"></div>';const r=await GET('/api/agenda_lista');document.getElementById('la').innerHTML=JSON.stringify(r.eventos||[]).slice(0,2000);}
 async function saveEv(){await POST('/api/agenda/criar',{titulo:et.value,inicio:ei.value,fim:ef.value});telaAgenda();}
-async function telaArq(){
- document.getElementById('tela').innerHTML='<h3>Arquivos - ao lado do sino depois</h3>Cat<select id="ac"><option>PRODUTO</option><option>FUNCIONARIO</option><option>REGISTRO</option></select> Ref<input id="ar"> Nome<input id="an"> Link<input id="au"><button onclick="saveAr()">Salvar</button><div id="lar"></div>';
- const r=await GET('/api/arquivos_lista');document.getElementById('lar').innerHTML=JSON.stringify(r.arquivos||[]);
-}
+async function telaArq(){document.getElementById('tela').innerHTML='<h3>Arquivos</h3><select id="ac"><option>PRODUTO</option><option>FUNCIONARIO</option><option>REGISTRO</option></select><input id="ar" placeholder="ref"><input id="an" placeholder="nome"><input id="au" placeholder="link" size="30"><button onclick="saveAr()">Salvar</button><div id="lar"></div>';const r=await GET('/api/arquivos_lista');document.getElementById('lar').innerHTML=JSON.stringify(r.arquivos||[]).slice(0,2000);}
 async function saveAr(){await POST('/api/arquivos/upload_json',{categoria:ac.value,referencia:ar.value,nome:an.value,url:au.value});telaArq();}
-async function telaPonto(){
- document.getElementById('tela').innerHTML='<h3>Ponto - ajuste + atestado + valor</h3><div id="lp">...</div><p>Mat<input id="pm"> Data<input id="pd" type="date"> Ent<input id="pe" type="time" value="08:00"> Sai<input id="ps" type="time" value="17:00"><button onclick="savePt()">Registrar</button></p><p>Atestado Mat<input id="am"> Data<input id="ad" type="date"> Dias<input id="adi" value="1"><button onclick="saveAt()">Salvar atestado</button></p>';
- const r=await GET('/api/rh/ponto_calc');document.getElementById('lp').innerHTML='Pontos:'+JSON.stringify((r.ponto||[]).slice(0,5))+'<br>Ajustes:'+JSON.stringify(r.ajustes||[])+'<br>Atestados:'+JSON.stringify(r.atestados||[]);
-}
+async function telaPonto(){document.getElementById('tela').innerHTML='<h3>Ponto</h3><div id="lp">...</div>Mat<input id="pm" size="8">Data<input id="pd" type="date">Ent<input id="pe" type="time" value="08:00">Sai<input id="ps" type="time" value="17:00"><button onclick="savePt()">Registrar</button><br>Atest Mat<input id="am" size="8">Data<input id="ad" type="date">Dias<input id="adi" value="1" size="3"><button onclick="saveAt()">Atestado</button>';const r=await GET('/api/rh/ponto_calc');document.getElementById('lp').innerHTML=JSON.stringify(r).slice(0,2000);}
 async function savePt(){await POST('/api/rh/ponto/registrar2',{funcionario_matricula:pm.value,data:pd.value,entrada:pe.value,saida:ps.value});telaPonto();}
 async function saveAt(){await POST('/api/rh/atestados/criar',{funcionario_matricula:am.value,data:ad.value,dias:adi.value});telaPonto();}
+async function telaBot(){document.getElementById('tela').innerHTML='<h3>Bot Celular</h3><div id="bcfg">...</div>Nome<input id="bnome" placeholder="Dona Padaria"><button onclick="saveBot()">Salvar Bot</button><hr>Teste:<br><input id="bmsg" placeholder="oi, preco, horario" size="30"><button onclick="testBot()">Enviar</button><div id="bchat" style="background:#eef;padding:8px;margin-top:6px"></div>';const r=await GET('/api/bot/config');document.getElementById('bcfg').innerHTML=JSON.stringify(r).slice(0,1000);}
+async function saveBot(){await POST('/api/bot/config',{nome_bot:bnome.value});alert('salvo');telaBot();}
+async function testBot(){const m=bmsg.value;document.getElementById('bchat').innerHTML+='<br>Voce:'+m;const r=await POST('/api/bot/responder',{mensagem:m});document.getElementById('bchat').innerHTML+='<br>Bot:'+(r.resposta||JSON.stringify(r));}
 telaBancos();
 </script></body></html>
