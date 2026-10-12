@@ -1,1477 +1,247 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Panificadora ERP - Gestao Completa</title>
-<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/lucide@1/dist/umd/lucide.min.js"></script>
-<style>
-:root{
-  --bg:#f1f5f9; --card:#fff; --text:#0f172a; --muted:#64748b;
-  --accent:#16a34a; --accent-dark:#15803d; --accent-soft:#dcfce7;
-  --accent2:#f59e0b; --danger:#dc2626; --danger-soft:#fee2e2;
-  --border:#e2e8f0; --header:#1e293b; --sidebar:#fff; --sidebar-hover:#f1f5f9;
-  --shadow:0 1px 3px rgba(0,0,0,.06);
-}
-*{margin:0;padding:0;box-sizing:border-box;font-family:'Quicksand',sans-serif}
-body{background:var(--bg);color:var(--text);font-size:14px}
-.hidden{display:none!important}
+import os
+import json
+import hashlib
+import random
+import psycopg2
+import psycopg2.extras
+from datetime import datetime
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from urllib.parse import urlparse, parse_qs
+from dotenv import load_dotenv
+load_dotenv()
 
-/* ===== LOGIN ===== */
-#loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%)}
-.login-box{background:#fff;padding:40px;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.3);width:380px;max-width:90vw}
-.login-box h1{font-size:28px;font-weight:700;color:var(--accent-dark);margin-bottom:4px}
-.login-box p{color:var(--muted);margin-bottom:24px;font-size:14px}
-.login-box label{display:block;font-weight:600;margin:12px 0 6px;font-size:13px;color:var(--text)}
-.login-box input{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:8px;font-size:14px;outline:none;transition:border .2s}
-.login-box input:focus{border-color:var(--accent)}
-.login-box button{width:100%;margin-top:20px;padding:13px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;transition:background .2s}
-.login-box button:hover{background:var(--accent-dark)}
-.login-error{color:var(--danger);font-size:13px;margin-top:10px;min-height:18px}
-.login-hint{margin-top:16px;font-size:12px;color:var(--muted);text-align:center;background:var(--accent-soft);padding:8px;border-radius:6px}
+def numero_float(v, pad=0.0):
+    try:
+        if v in (None,""): return pad
+        return float(v)
+    except: return pad
 
-/* ===== APP SHELL ===== */
-#app{display:flex;min-height:100vh}
-header.topbar{position:fixed;top:0;left:0;right:0;height:52px;background:var(--header);display:flex;align-items:center;padding:0 16px;z-index:100;gap:12px}
-.logo{color:#fff;font-weight:700;font-size:18px;display:flex;align-items:center;gap:8px}
-.logo span{color:var(--accent)}
-.topbar .spacer{flex:1}
-.top-icon{color:#cbd5e1;cursor:pointer;padding:6px;border-radius:6px;display:flex;align-items:center;transition:background .2s}
-.top-icon:hover{background:rgba(255,255,255,.1);color:#fff}
-.user-avatar{width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;cursor:pointer}
+def hash_senha(s):
+    return hashlib.sha256(str(s or "").encode()).hexdigest()
 
-.banner{background:#fef3c7;padding:8px 20px;font-size:13px;color:#92400e;display:flex;align-items:center;gap:12px;position:fixed;top:52px;left:0;right:0;z-index:99}
-.banner button{background:var(--accent);color:#fff;border:none;padding:5px 14px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer}
+DATABASE_URI = os.environ.get("DATABASE_URI","")
+def get_conn():
+    if DATABASE_URI:
+        c = psycopg2.connect(DATABASE_URI, connect_timeout=30)
+    else:
+        c = psycopg2.connect(host=os.environ.get("DB_HOST","localhost"),port=int(os.environ.get("DB_PORT",5432)),dbname=os.environ.get("DB_NAME","postgres"),user=os.environ.get("DB_USER","postgres"),password=os.environ.get("DB_PASS",""),connect_timeout=30)
+    c.autocommit=False
+    return c
 
-aside.sidebar{position:fixed;top:52px;left:0;bottom:0;width:240px;background:var(--sidebar);border-right:1px solid var(--border);overflow-y:auto;padding:8px 0;z-index:90}
-.sidebar::-webkit-scrollbar{width:5px}
-.sidebar::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
-.menu-group{margin-bottom:2px}
-.menu-group-header{display:flex;align-items:center;gap:8px;padding:10px 16px;font-weight:700;font-size:13px;color:var(--text);cursor:pointer;user-select:none}
-.menu-group-header:hover{background:var(--sidebar-hover)}
-.menu-group-header svg{width:18px;height:18px;color:var(--muted)}
-.menu-group-header .chev{margin-left:auto;width:14px;height:14px;transition:transform .2s}
-.menu-group.collapsed .chev{transform:rotate(-90deg)}
-.menu-group.collapsed .menu-items{display:none}
-.menu-items{padding:2px 0}
-.menu-item{display:flex;align-items:center;gap:10px;padding:8px 16px 8px 42px;font-size:13px;color:var(--muted);cursor:pointer;transition:all .15s;text-decoration:none}
-.menu-item:hover{background:var(--sidebar-hover);color:var(--text)}
-.menu-item.active{background:var(--accent-soft);color:var(--accent-dark);font-weight:700;border-right:3px solid var(--accent)}
-.menu-item svg{width:15px;height:15px}
+class DBConnection:
+    def __enter__(self):
+        self.conn=get_conn()
+        self.cur=self.conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        return self.conn,self.cur
+    def __exit__(self,a,b,c):
+        try:
+            if a: self.conn.rollback()
+            else: self.conn.commit()
+        except: pass
+        try: self.cur.close()
+        except: pass
+        try: self.conn.close()
+        except: pass
 
-main.content{margin-left:240px;margin-top:52px;padding:24px;flex:1;min-width:0}
-.page-title{font-size:22px;font-weight:700;margin-bottom:4px}
-.page-sub{color:var(--muted);font-size:14px;margin-bottom:20px}
+def garantir_schema():
+    with DBConnection() as (conn,cur):
+        cur.execute("CREATE TABLE IF NOT EXISTS funcionarios (id SERIAL PRIMARY KEY, matricula VARCHAR(20) UNIQUE, nome VARCHAR(100), cargo VARCHAR(100), role VARCHAR(20) DEFAULT 'operador', senha_hash VARCHAR(255), permissoes TEXT DEFAULT '[]', status VARCHAR(20) DEFAULT 'ATIVO', salario NUMERIC DEFAULT 1500, created_at TIMESTAMP DEFAULT NOW())")
+        cur.execute("CREATE TABLE IF NOT EXISTS produtos (id SERIAL PRIMARY KEY, nome TEXT, sku TEXT, categoria TEXT, preco_venda NUMERIC DEFAULT 0, custo NUMERIC DEFAULT 0, status TEXT DEFAULT 'ATIVO', created_at TIMESTAMP DEFAULT NOW())")
+        cur.execute("CREATE TABLE IF NOT EXISTS clientes (id SERIAL PRIMARY KEY, nome TEXT, telefone TEXT, created_at TIMESTAMP DEFAULT NOW())")
+        cur.execute("CREATE TABLE IF NOT EXISTS site_config_grid (id SERIAL PRIMARY KEY, secao TEXT, nome TEXT, valor TEXT)")
+        cur.execute("CREATE TABLE IF NOT EXISTS site_pedidos (id SERIAL PRIMARY KEY, cliente_nome TEXT, telefone TEXT, forma_pagamento TEXT, total NUMERIC DEFAULT 0, status TEXT DEFAULT 'SOLICITADO', created_at TIMESTAMP DEFAULT NOW())")
+        cur.execute("CREATE TABLE IF NOT EXISTS contas_bancarias (id SERIAL PRIMARY KEY, banco TEXT, ag_conta TEXT, provedor TEXT DEFAULT 'MANUAL', saldo NUMERIC DEFAULT 0, ultimo_sync TIMESTAMP, created_at TIMESTAMP DEFAULT NOW())")
+        cur.execute("CREATE TABLE IF NOT EXISTS integracoes_config (id SERIAL PRIMARY KEY, tipo TEXT UNIQUE, provedor TEXT, api_key TEXT, client_id TEXT, client_secret TEXT, config_extra TEXT, ativo BOOLEAN DEFAULT FALSE, created_at TIMESTAMP DEFAULT NOW())")
+        cur.execute("CREATE TABLE IF NOT EXISTS maquininhas (id SERIAL PRIMARY KEY, operadora TEXT, taxa NUMERIC DEFAULT 0, created_at TIMESTAMP DEFAULT NOW())")
+        cur.execute("CREATE TABLE IF NOT EXISTS repasses_ifood (id SERIAL PRIMARY KEY, periodo TEXT, bruto NUMERIC DEFAULT 0, taxa NUMERIC DEFAULT 0, liquido NUMERIC DEFAULT 0, created_at TIMESTAMP DEFAULT NOW())")
+        cur.execute("CREATE TABLE IF NOT EXISTS boletos (id SERIAL PRIMARY KEY, conta_id INT, nosso_numero TEXT, link TEXT, linha_digitavel TEXT, valor NUMERIC DEFAULT 0, vencimento DATE, status TEXT DEFAULT 'EMITIDO', created_at TIMESTAMP DEFAULT NOW())")
+        cur.execute("CREATE TABLE IF NOT EXISTS notas_fiscais (id SERIAL PRIMARY KEY, tipo TEXT, numero TEXT, pessoa TEXT, total NUMERIC DEFAULT 0, total_impostos NUMERIC DEFAULT 0, aliq_icms NUMERIC DEFAULT 0, aliq_pis NUMERIC DEFAULT 0, aliq_cofins NUMERIC DEFAULT 0, aliq_iss NUMERIC DEFAULT 0, created_at TIMESTAMP DEFAULT NOW())")
+        cur.execute("CREATE TABLE IF NOT EXISTS lancamentos_contabeis (id SERIAL PRIMARY KEY, origem TEXT, referencia_id INT, descricao TEXT, valor NUMERIC DEFAULT 0, tipo TEXT, created_at TIMESTAMP DEFAULT NOW())")
+        cur.execute("CREATE TABLE IF NOT EXISTS arquivos (id SERIAL PRIMARY KEY, categoria TEXT, referencia TEXT, nome TEXT, url TEXT, created_at TIMESTAMP DEFAULT NOW())")
+        cur.execute("CREATE TABLE IF NOT EXISTS eventos_agenda (id SERIAL PRIMARY KEY, titulo TEXT, inicio TIMESTAMP, fim TIMESTAMP, tipo TEXT, responsavel TEXT, created_at TIMESTAMP DEFAULT NOW())")
+        cur.execute("CREATE TABLE IF NOT EXISTS ponto_registros (id SERIAL PRIMARY KEY, funcionario_matricula TEXT, data DATE, entrada TIME, saida TIME, horas_trabalhadas NUMERIC DEFAULT 8, horas_extras NUMERIC DEFAULT 0, status TEXT DEFAULT 'ATIVO', created_at TIMESTAMP DEFAULT NOW())")
+        cur.execute("CREATE TABLE IF NOT EXISTS ponto_ajustes (id SERIAL PRIMARY KEY, ponto_id INT, funcionario_matricula TEXT, data_ref DATE, campo TEXT, valor_novo TEXT, motivo TEXT, status TEXT DEFAULT 'PENDENTE', created_at TIMESTAMP DEFAULT NOW())")
+        cur.execute("CREATE TABLE IF NOT EXISTS atestados (id SERIAL PRIMARY KEY, funcionario_matricula TEXT, data DATE, dias NUMERIC DEFAULT 1, motivo TEXT, created_at TIMESTAMP DEFAULT NOW())")
+        cur.execute("CREATE TABLE IF NOT EXISTS contas_financeiras (id SERIAL PRIMARY KEY, tipo TEXT, descricao TEXT, pessoa TEXT, valor NUMERIC DEFAULT 0, vencimento DATE, categoria TEXT, status TEXT DEFAULT 'ABERTO', created_at TIMESTAMP DEFAULT NOW())")
+        cur.execute("SELECT id FROM funcionarios WHERE matricula='AP-2026-0001' LIMIT 1")
+        if cur.fetchone():
+            cur.execute("UPDATE funcionarios SET senha_hash=%s, role='admin', status='ATIVO' WHERE matricula='AP-2026-0001'",(hash_senha("123"),))
+        else:
+            cur.execute("INSERT INTO funcionarios (matricula,nome,cargo,role,senha_hash,status) VALUES ('AP-2026-0001','Administrador','Gerente','admin',%s,'ATIVO')",(hash_senha("123"),))
+        conn.commit()
+    print("Schema pronto",flush=True)
 
-/* ===== CARDS & KPIs ===== */
-.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:20px}
-.kpi-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;box-shadow:var(--shadow);display:flex;gap:12px;align-items:flex-start}
-.kpi-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.kpi-icon svg{width:20px;height:20px}
-.kpi-label{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.3px}
-.kpi-value{font-size:22px;font-weight:700;margin-top:2px}
-.kpi-sub{font-size:12px;color:var(--muted);margin-top:2px}
+class APIHandler(BaseHTTPRequestHandler):
+    def set_headers(self,s=200):
+        self.send_response(s)
+        self.send_header("Content-Type","application/json; charset=utf-8")
+        self.send_header("Access-Control-Allow-Origin","*")
+        self.send_header("Access-Control-Allow-Methods","GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers","Content-Type")
+        self.end_headers()
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self.send_header("Access-Control-Allow-Origin","*")
+        self.send_header("Access-Control-Allow-Methods","GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers","Content-Type")
+        self.end_headers()
+    def get_body(self):
+        try:
+            t=int(self.headers.get("Content-Length",0))
+            b=self.rfile.read(t) if t else b"{}"
+            return json.loads(b) if b else {}
+        except: return {}
+    def responder(self,d,s=200):
+        try:
+            self.set_headers(s)
+            self.wfile.write(json.dumps(d,default=str,ensure_ascii=False).encode("utf-8"))
+        except (BrokenPipeError,ConnectionResetError,OSError): pass
+    def log_message(self,f,*a): print(f"[{datetime.now().strftime('%H:%M:%S')}] {a[0]}",flush=True)
+    def serve_static(self,nome,ctype):
+        try:
+            base=os.path.dirname(os.path.abspath(__file__))
+            for pasta in (os.path.join(base,"public"),base):
+                c=os.path.join(pasta,nome)
+                if os.path.exists(c):
+                    with open(c,"rb") as f: data=f.read()
+                    try:
+                        self.send_response(200); self.send_header("Content-Type",ctype); self.end_headers()
+                        self.wfile.write(data)
+                    except (BrokenPipeError,ConnectionResetError,OSError): pass
+                    return True
+            return False
+        except: return False
+    def do_GET(self):
+        p=urlparse(self.path); path=p.path; q=parse_qs(p.query)
+        if path in ("/","/site","/site.html","/index","/index.html"):
+            if self.serve_static("site.html","text/html; charset=utf-8"): return
+        if path in ("/admin","/dashboard","/dashboard.html"):
+            if self.serve_static("dashboard.html","text/html; charset=utf-8"): return
+        if path in ("/novas.js","/public/novas.js"):
+            if self.serve_static("novas.js","application/javascript; charset=utf-8"): return
+            return self.responder({"erro":"novas.js nao achado"},404)
+        if path in ("/extra","/extra.html"):
+            if self.serve_static("extra.html","text/html; charset=utf-8"): return
+        try:
+            with DBConnection() as (conn,cur):
+                def sel(sql):
+                    try:
+                        cur.execute(sql)
+                        return [dict(r) for r in (cur.fetchall() or [])]
+                    except: return []
+                if path=="/api/health": return self.responder({"status":"ok"})
+                if path=="/api/produtos": return self.responder({"produtos":sel("SELECT * FROM produtos ORDER BY id DESC LIMIT 200")})
+                if path in ("/api/ia-vendas/produtos","/api/ia-vendas/produtos-recomendados"):
+                    lst=sel("SELECT * FROM produtos WHERE status='ATIVO' ORDER BY id DESC LIMIT 100")
+                    return self.responder({"produtos":lst,"recomendados":lst[:6]})
+                if path=="/api/site/config": return self.responder({"configuracoes":sel("SELECT * FROM site_config_grid ORDER BY id")})
+                if path=="/api/site/pedidos": return self.responder({"pedidos":sel("SELECT * FROM site_pedidos ORDER BY id DESC LIMIT 200")})
+                if path=="/api/bot/config": return self.responder({"config_geral":[],"regras":[]})
+                if path=="/api/gerente/alertas": return self.responder({"alertas":[]})
+                if path=="/api/clientes": return self.responder({"clientes":sel("SELECT * FROM clientes ORDER BY id DESC LIMIT 200")})
+                if path=="/api/funcionarios": return self.responder({"funcionarios":sel("SELECT id,matricula,nome,cargo,role,status FROM funcionarios ORDER BY id DESC")})
+                if path=="/api/vendas": return self.responder({"vendas":sel("SELECT * FROM vendas ORDER BY id DESC LIMIT 200")})
+                if path=="/api/contas": return self.responder({"contas":sel("SELECT * FROM contas_financeiras ORDER BY id DESC LIMIT 300")})
+                if path=="/api/bancos/config": return self.responder({"configs":sel("SELECT * FROM integracoes_config ORDER BY tipo"),"contas":sel("SELECT * FROM contas_bancarias ORDER BY id DESC")})
+                if path=="/api/bancos/vinculos": return self.responder({"contas":sel("SELECT * FROM contas_bancarias ORDER BY id DESC"),"maquininhas":sel("SELECT * FROM maquininhas ORDER BY id DESC"),"ifood":sel("SELECT * FROM repasses_ifood ORDER BY id DESC")})
+                if path=="/api/nf_lista": return self.responder({"notas":sel("SELECT * FROM notas_fiscais ORDER BY id DESC LIMIT 100")})
+                if path=="/api/dre_resumo":
+                    nfs=sel("SELECT * FROM notas_fiscais LIMIT 500")
+                    rec=sum(float(n.get("total") or 0) for n in nfs if n.get("tipo")=="SAIDA")
+                    imp=sum(float(n.get("total_impostos") or 0) for n in nfs if n.get("tipo")=="SAIDA")
+                    cus=sum(float(n.get("total") or 0) for n in nfs if n.get("tipo")=="ENTRADA")
+                    return self.responder({"receita":rec,"impostos":imp,"liq":rec-imp,"custos":cus,"lucro":rec-imp-cus})
+                if path=="/api/arquivos_lista": return self.responder({"arquivos":sel("SELECT * FROM arquivos ORDER BY id DESC LIMIT 100")})
+                if path=="/api/agenda_lista":
+                    evs=sel("SELECT * FROM eventos_agenda ORDER BY inicio LIMIT 200")
+                    ano=q.get("ano",[None])[0]; mes=q.get("mes",[None])[0]
+                    if ano and mes:
+                        pref=f"{ano}-{str(mes).zfill(2)}"; evs=[e for e in evs if str(e.get("inicio") or "").startswith(pref)]
+                    return self.responder({"eventos":evs})
+                if path=="/api/rh/ponto_calc": return self.responder({"ponto":sel("SELECT * FROM ponto_registros ORDER BY data DESC LIMIT 500"),"ajustes":sel("SELECT * FROM ponto_ajustes ORDER BY id DESC LIMIT 200"),"atestados":sel("SELECT * FROM atestados ORDER BY data DESC LIMIT 200"),"funcionarios":sel("SELECT matricula,nome,salario FROM funcionarios ORDER BY nome")})
+                if path=="/api/dashboard/resumo":
+                    try:
+                        cur.execute("SELECT COALESCE(SUM(total),0) AS t FROM vendas WHERE DATE(data)=CURRENT_DATE"); vh=float((cur.fetchone() or {}).get("t",0) or 0)
+                    except: vh=0
+                    return self.responder({"vendas_hoje":vh,"vendas_mes":vh,"estoque_baixo":0,"vendas_7d":[],"saldo_bancos":0,"receber_hoje":0,"pagar_hoje":0})
+                return self.responder({"erro":"Rota nao encontrada "+path},404)
+        except Exception as e: return self.responder({"erro":str(e)},500)
+    def do_POST(self):
+        path=urlparse(self.path).path; d=self.get_body()
+        try:
+            with DBConnection() as (conn,cur):
+                if path=="/api/login":
+                    mat=str(d.get("matricula","")).strip(); sen=str(d.get("senha","")).strip()
+                    cur.execute("SELECT * FROM funcionarios WHERE matricula=%s LIMIT 1",(mat,)); u=cur.fetchone()
+                    if not u: return self.responder({"erro":"Matricula nao encontrada"},401)
+                    if u.get("senha_hash")!=hash_senha(sen): return self.responder({"erro":"Senha invalida"},401)
+                    u=dict(u); u.pop("senha_hash",None)
+                    return self.responder({"sucesso":True,"usuario":u})
+                if path=="/api/bancos/config":
+                    cur.execute("INSERT INTO integracoes_config (tipo,provedor,api_key,client_id,client_secret,config_extra,ativo) VALUES (%s,%s,%s,%s,%s,%s,TRUE) ON CONFLICT (tipo) DO UPDATE SET provedor=EXCLUDED.provedor, api_key=EXCLUDED.api_key, client_id=EXCLUDED.client_id, client_secret=EXCLUDED.client_secret, config_extra=EXCLUDED.config_extra, ativo=TRUE",(d.get("tipo"),d.get("provedor"),d.get("api_key"),d.get("client_id"),d.get("client_secret"),d.get("config_extra")))
+                    return self.responder({"sucesso":True})
+                if path=="/api/bancos/conta":
+                    cur.execute("INSERT INTO contas_bancarias (banco,ag_conta,provedor) VALUES (%s,%s,%s)",(d.get("banco"),d.get("ag_conta"),d.get("provedor") or "MANUAL"))
+                    return self.responder({"sucesso":True})
+                if path=="/api/bancos/maquininha":
+                    cur.execute("INSERT INTO maquininhas (operadora,taxa) VALUES (%s,%s)",(d.get("operadora"),numero_float(d.get("taxa"))))
+                    return self.responder({"sucesso":True})
+                if path=="/api/bancos/sync":
+                    cid=d.get("conta_id"); saldo=0
+                    if cid: cur.execute("UPDATE contas_bancarias SET saldo=%s, ultimo_sync=NOW() WHERE id=%s",(saldo,cid))
+                    return self.responder({"sucesso":True,"modo":"LOCAL","saldo":saldo})
+                if path=="/api/ifood/sync":
+                    tot=numero_float(d.get("total"))
+                    cur.execute("INSERT INTO site_pedidos (cliente_nome,telefone,forma_pagamento,total,status) VALUES (%s,%s,'IFOOD',%s,'CONFIRMADO') RETURNING id",(d.get("cliente_nome") or "Cliente iFood",d.get("telefone") or "",tot)); pid=cur.fetchone()["id"]
+                    cur.execute("INSERT INTO repasses_ifood (periodo,bruto,taxa,liquido) VALUES (TO_CHAR(NOW(),'YYYY-MM'),%s,%s,%s)",(tot,tot*0.27,tot*0.73))
+                    return self.responder({"sucesso":True,"pedido_id":pid})
+                if path=="/api/boletos/gerar":
+                    valor=numero_float(d.get("valor")); venc=d.get("vencimento"); pessoa=d.get("pessoa") or "Cliente"
+                    nosso=f"BL{random.randint(10000,99999)}"; link=f"https://boleto.teste/{nosso}"; linha=f"23793.38128 60007.827136 95000.063305 1 991700000{int(valor*100)}"
+                    try:
+                        cur.execute("INSERT INTO contas_financeiras (tipo,descricao,pessoa,valor,vencimento,categoria,status) VALUES ('RECEBER',%s,%s,%s,%s,'BOLETO','ABERTO') RETURNING id",(d.get("descricao") or nosso,pessoa,valor,venc)); nid=cur.fetchone()["id"]
+                    except: nid=None
+                    cur.execute("INSERT INTO boletos (conta_id,nosso_numero,link,linha_digitavel,valor,vencimento) VALUES (%s,%s,%s,%s,%s,%s)",(nid,nosso,link,linha,valor,venc))
+                    return self.responder({"sucesso":True,"link":link,"linha_digitavel":linha,"nosso_numero":nosso})
+                if path=="/api/nf/criar":
+                    tot=numero_float(d.get("total")); timp=tot*numero_float(d.get("aliq_icms"))/100+tot*numero_float(d.get("aliq_pis"))/100+tot*numero_float(d.get("aliq_cofins"))/100+tot*numero_float(d.get("aliq_iss"))/100
+                    cur.execute("INSERT INTO notas_fiscais (tipo,numero,pessoa,total,total_impostos,aliq_icms,aliq_pis,aliq_cofins,aliq_iss) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id",(d.get("tipo"),d.get("numero"),d.get("pessoa"),tot,timp,numero_float(d.get("aliq_icms")),numero_float(d.get("aliq_pis")),numero_float(d.get("aliq_cofins")),numero_float(d.get("aliq_iss")))); nid=cur.fetchone()["id"]
+                    cur.execute("INSERT INTO lancamentos_contabeis (origem,referencia_id,descricao,valor,tipo) VALUES ('NF',%s,%s,%s,%s)",(nid,f"NF {d.get('tipo')} {d.get('numero')}",tot,d.get("tipo")))
+                    return self.responder({"sucesso":True,"numero":d.get("numero"),"impostos":timp})
+                if path=="/api/dre/simular":
+                    fat=numero_float(d.get("faturamento")); cus=numero_float(d.get("custo")); reg=str(d.get("regime") or "SIMPLES").upper()
+                    if reg=="SIMPLES": pis=fat*0.0065; cof=fat*0.03; icms=fat*0.034; iss=fat*0.02
+                    elif reg=="PRESUMIDO": pis=fat*0.0065; cof=fat*0.03; icms=fat*numero_float(d.get("aliq_icms"),18)/100*0.3; iss=fat*numero_float(d.get("aliq_iss"),5)/100*0.32
+                    else: pis=fat*0.0165; cof=fat*0.076; icms=fat*numero_float(d.get("aliq_icms"),18)/100; iss=fat*numero_float(d.get("aliq_iss"),5)/100*0.1
+                    return self.responder({"pis":pis,"cofins":cof,"icms":icms,"iss":iss,"lucro":fat-(pis+cof+icms+iss)-cus})
+                if path=="/api/arquivos/upload_json":
+                    cur.execute("INSERT INTO arquivos (categoria,referencia,nome,url) VALUES (%s,%s,%s,%s)",(d.get("categoria"),d.get("referencia"),d.get("nome"),d.get("url")))
+                    return self.responder({"sucesso":True})
+                if path=="/api/agenda/criar":
+                    u=d.get("usuario") or {}
+                    cur.execute("INSERT INTO eventos_agenda (titulo,inicio,fim,tipo,responsavel) VALUES (%s,%s,%s,%s,%s)",(d.get("titulo"),d.get("inicio"),d.get("fim"),d.get("tipo"),u.get("matricula")))
+                    return self.responder({"sucesso":True})
+                if path=="/api/rh/ponto/registrar2":
+                    cur.execute("INSERT INTO ponto_registros (funcionario_matricula,data,entrada,saida,horas_trabalhadas,horas_extras) VALUES (%s,%s,%s,%s,%s,%s)",(d.get("funcionario_matricula"),d.get("data"),d.get("entrada"),d.get("saida"),numero_float(d.get("horas_trabalhadas"),8),numero_float(d.get("horas_extras"),0)))
+                    return self.responder({"sucesso":True})
+                if path=="/api/rh/ponto/ajustar":
+                    cur.execute("INSERT INTO ponto_ajustes (ponto_id,funcionario_matricula,data_ref,campo,valor_novo,motivo) VALUES (%s,%s,%s,%s,%s,%s)",(d.get("ponto_id"),d.get("funcionario_matricula"),d.get("data_ref"),d.get("campo"),str(d.get("valor_novo") or ""),d.get("motivo")))
+                    return self.responder({"sucesso":True})
+                if path=="/api/rh/atestados/criar":
+                    cur.execute("INSERT INTO atestados (funcionario_matricula,data,dias,motivo) VALUES (%s,%s,%s,%s)",(d.get("funcionario_matricula"),d.get("data"),numero_float(d.get("dias"),1),d.get("motivo")))
+                    return self.responder({"sucesso":True})
+                if path=="/api/produtos/salvar":
+                    cur.execute("INSERT INTO produtos (nome,preco_venda,status) VALUES (%s,%s,'ATIVO')",(d.get("nome"),numero_float(d.get("preco_venda"))))
+                    return self.responder({"sucesso":True})
+                return self.responder({"erro":"Rota nao encontrada "+path},404)
+        except Exception as e: return self.responder({"erro":str(e)},500)
 
-.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;box-shadow:var(--shadow);margin-bottom:16px}
-.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-.card-title{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px}
-.card-title svg{width:18px;height:18px;color:var(--muted)}
-.card-sub{font-size:12px;color:var(--muted);margin-top:2px}
+def run():
+    garantir_schema()
+    port=int(os.environ.get("PORT",8080))
+    server=HTTPServer(("0.0.0.0",port),APIHandler)
+    print(f"Servidor rodando porta {port}",flush=True)
+    server.serve_forever()
 
-.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-@media(max-width:900px){.grid-2{grid-template-columns:1fr}}
-
-/* ===== TABLES ===== */
-table.data-table{width:100%;border-collapse:collapse;font-size:13px}
-.data-table th{text-align:left;padding:10px 12px;border-bottom:2px solid var(--border);color:var(--muted);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.3px}
-.data-table td{padding:10px 12px;border-bottom:1px solid var(--border)}
-.data-table tr:hover td{background:#f8fafc}
-.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
-.badge.ok{background:var(--accent-soft);color:var(--accent-dark)}
-.badge.warn{background:#fef3c7;color:#92400e}
-.badge.danger{background:var(--danger-soft);color:var(--danger)}
-.badge.info{background:#dbeafe;color:#1e40af}
-
-/* ===== FORMS ===== */
-.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
-.form-group{display:flex;flex-direction:column;gap:4px}
-.form-group label{font-size:12px;font-weight:700;color:var(--text)}
-.form-group input,.form-group select,.form-group textarea{padding:9px 12px;border:1px solid var(--border);border-radius:7px;font-size:13px;outline:none;font-family:inherit}
-.form-group input:focus,.form-group select:focus{border-color:var(--accent)}
-.btn{padding:9px 18px;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;border:none;display:inline-flex;align-items:center;gap:6px;transition:all .15s}
-.btn svg{width:15px;height:15px}
-.btn-primary{background:var(--accent);color:#fff}
-.btn-primary:hover{background:var(--accent-dark)}
-.btn-secondary{background:#fff;color:var(--text);border:1px solid var(--border)}
-.btn-secondary:hover{background:var(--sidebar-hover)}
-.btn-danger{background:var(--danger);color:#fff}
-.btn-sm{padding:5px 10px;font-size:12px}
-.form-actions{display:flex;gap:8px;margin-top:14px;justify-content:flex-end}
-
-/* ===== CHAT (IA Vendas) ===== */
-.chat-box{border:1px solid var(--border);border-radius:10px;height:400px;display:flex;flex-direction:column;background:#fff}
-.chat-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
-.chat-msg{max-width:75%;padding:10px 14px;border-radius:14px;font-size:13px;line-height:1.5;white-space:pre-wrap}
-.chat-msg.bot{background:#f1f5f9;color:var(--text);align-self:flex-start;border-bottom-left-radius:4px}
-.chat-msg.user{background:var(--accent);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
-.chat-input{display:flex;gap:8px;padding:12px;border-top:1px solid var(--border)}
-.chat-input input{flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:20px;font-size:13px;outline:none}
-.chat-input button{background:var(--accent);color:#fff;border:none;border-radius:50%;width:40px;height:40px;cursor:pointer;display:flex;align-items:center;justify-content:center}
-
-/* ===== ALERTS ===== */
-.alert-item{display:flex;align-items:center;gap:12px;padding:12px;border-radius:8px;margin-bottom:8px;border:1px solid var(--border)}
-.alert-item.critico{background:var(--danger-soft);border-color:#fecaca}
-.alert-item.alerta{background:#fef3c7;border-color:#fde68a}
-.alert-item.atencao{background:#dbeafe;border-color:#bfdbfe}
-.alert-item svg{width:20px;height:20px;flex-shrink:0}
-
-/* ===== MODAL ===== */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px}
-.modal{background:#fff;border-radius:12px;padding:24px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto}
-.modal h3{font-size:18px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
-
-.empty-state{text-align:center;padding:40px 20px;color:var(--muted)}
-.empty-state svg{width:48px;height:48px;margin-bottom:12px;opacity:.4}
-
-.toast{position:fixed;bottom:20px;right:20px;background:var(--text);color:#fff;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:600;z-index:300;box-shadow:0 4px 12px rgba(0,0,0,.2);animation:slideIn .3s ease}
-.toast.success{background:var(--accent-dark)}
-.toast.error{background:var(--danger)}
-@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
-
-.app-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
-.app-tile{display:flex;gap:12px;padding:14px;border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s;align-items:flex-start}
-.app-tile:hover{border-color:var(--accent);box-shadow:0 2px 8px rgba(22,163,74,.15);transform:translateY(-2px)}
-.app-tile-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.app-tile-icon svg{width:18px;height:18px;color:#fff}
-.app-tile-name{font-weight:700;font-size:13px}
-.app-tile-desc{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.4}
-
-.chart-container{width:100%;height:300px}
-</style>
-</head>
-<body>
-
-<!-- LOGIN -->
-<div id="loginScreen">
-  <div class="login-box">
-    <h1>Panificadora <span style="color:var(--accent)">ERP</span></h1>
-    <p>GestÃ£o completa da sua padaria</p>
-    <label>MatrÃ­cula</label>
-    <input type="text" id="loginMatricula" placeholder="AP-2026-0001" value="AP-2026-0001">
-    <label>Senha</label>
-    <input type="password" id="loginSenha" placeholder="â€¢â€¢â€¢" value="123">
-    <button onclick="fazerLogin()">Entrar</button>
-    <div class="login-error" id="loginError"></div>
-    <div class="login-hint">PadrÃ£o: AP-2026-0001 / 123</div>
-  </div>
-</div>
-
-<!-- APP -->
-<div id="app" class="hidden">
-  <header class="topbar">
-    <div class="top-icon" onclick="toggleSidebar()"><i data-lucide="menu"></i></div>
-    <div class="logo">Panificadora<span>ERP</span></div>
-    <div class="spacer"></div>
-    <div class="top-icon" onclick="showView('dashboard')" title="InÃ­cio"><i data-lucide="layout-grid"></i></div>
-    <div class="top-icon" onclick="window.open('/site','_blank')" title="Ver Site PÃºblico"><i data-lucide="globe"></i></div>
-    <div class="top-icon" onclick="showView('ia-vendas')" title="IA de Vendas"><i data-lucide="sparkles"></i></div>
-    <div class="top-icon" onclick="showView('gerente')" title="Alertas"><i data-lucide="bell"></i></div>
-    <div class="user-avatar" onclick="fazerLogout()" title="Sair">AD</div>
-  </header>
-
-  <div class="banner">
-    <i data-lucide="info" style="width:16px;height:16px"></i>
-    <span>Sistema em funcionamento â€” conectado ao banco de dados local.</span>
-    <button onclick="showView('dashboard')">Ver resumo</button>
-  </div>
-
-  <aside class="sidebar" id="sidebar">
-    <div class="menu-group" data-group="dash">
-      <div class="menu-group-header" onclick="toggleGroup(this)"><i data-lucide="home"></i> Dashboard <i data-lucide="chevron-down" class="chev"></i></div>
-      <div class="menu-items">
-        <div class="menu-item active" data-view="dashboard" onclick="showView('dashboard')"><i data-lucide="activity"></i> VisÃ£o Geral</div>
-        <div class="menu-item" data-view="caixa" onclick="showView('caixa')"><i data-lucide="cash-register"></i> Caixa / PDV</div>
-      </div>
-    </div>
-    <div class="menu-group" data-group="cad">
-      <div class="menu-group-header" onclick="toggleGroup(this)"><i data-lucide="database"></i> Cadastros <i data-lucide="chevron-down" class="chev"></i></div>
-      <div class="menu-items">
-        <div class="menu-item" data-view="produtos" onclick="showView('produtos')"><i data-lucide="package"></i> Produtos</div>
-        <div class="menu-item" data-view="clientes" onclick="showView('clientes')"><i data-lucide="users"></i> Clientes</div>
-        <div class="menu-item" data-view="fornecedores" onclick="showView('fornecedores')"><i data-lucide="truck"></i> Fornecedores</div>
-        <div class="menu-item" data-view="funcionarios" onclick="showView('funcionarios')"><i data-lucide="user-cog"></i> FuncionÃ¡rios</div>
-      </div>
-    </div>
-    <div class="menu-group" data-group="vend">
-      <div class="menu-group-header" onclick="toggleGroup(this)"><i data-lucide="shopping-cart"></i> Vendas <i data-lucide="chevron-down" class="chev"></i></div>
-      <div class="menu-items">
-        <div class="menu-item" data-view="vendas" onclick="showView('vendas')"><i data-lucide="receipt"></i> Vendas</div>
-        <div class="menu-item" data-view="comandas" onclick="showView('comandas')"><i data-lucide="clipboard-list"></i> Comandas</div>
-        <div class="menu-item" data-view="pedidos-site" onclick="showView('pedidos-site')"><i data-lucide="globe"></i> Pedidos do Site</div>
-      </div>
-    </div>
-    <div class="menu-group" data-group="est">
-      <div class="menu-group-header" onclick="toggleGroup(this)"><i data-lucide="warehouse"></i> Estoque / WMS <i data-lucide="chevron-down" class="chev"></i></div>
-      <div class="menu-items">
-        <div class="menu-item" data-view="estoque" onclick="showView('estoque')"><i data-lucide="boxes"></i> Estoque</div>
-        <div class="menu-item" data-view="movimentos" onclick="showView('movimentos')"><i data-lucide="arrow-left-right"></i> MovimentaÃ§Ãµes</div>
-      </div>
-    </div>
-    <div class="menu-group" data-group="fin">
-      <div class="menu-group-header" onclick="toggleGroup(this)"><i data-lucide="wallet"></i> Financeiro <i data-lucide="chevron-down" class="chev"></i></div>
-      <div class="menu-items">
-        <div class="menu-item" data-view="contas" onclick="showView('contas')"><i data-lucide="file-text"></i> Contas a Pagar/Receber</div>
-        <div class="menu-item" data-view="tesouraria" onclick="showView('tesouraria')"><i data-lucide="safe"></i> Tesouraria</div>
-        <div class="menu-item" data-view="autorizacoes" onclick="showView('autorizacoes')"><i data-lucide="shield-check"></i> AutorizaÃ§Ãµes</div>
-      </div>
-    </div>
-    <div class="menu-group" data-group="rh">
-      <div class="menu-group-header" onclick="toggleGroup(this)"><i data-lucide="users-round"></i> RH <i data-lucide="chevron-down" class="chev"></i></div>
-      <div class="menu-items">
-        <div class="menu-item" data-view="ponto" onclick="showView('ponto')"><i data-lucide="clock"></i> Ponto</div>
-        <div class="menu-item" data-view="ferias" onclick="showView('ferias')"><i data-lucide="palmtree"></i> FÃ©rias</div>
-        <div class="menu-item" data-view="holerites" onclick="showView('holerites')"><i data-lucide="file-badge"></i> Holerites</div>
-      </div>
-    </div>
-    <div class="menu-group" data-group="log">
-      <div class="menu-group-header" onclick="toggleGroup(this)"><i data-lucide="truck"></i> LogÃ­stica <i data-lucide="chevron-down" class="chev"></i></div>
-      <div class="menu-items">
-        <div class="menu-item" data-view="logistica" onclick="showView('logistica')"><i data-lucide="route"></i> Entregas</div>
-      </div>
-    </div>
-    <div class="menu-group" data-group="ia">
-      <div class="menu-group-header" onclick="toggleGroup(this)"><i data-lucide="bot"></i> InteligÃªncia Artificial <i data-lucide="chevron-down" class="chev"></i></div>
-      <div class="menu-items">
-        <div class="menu-item" data-view="bot-config" onclick="showView('bot-config')"><i data-lucide="settings-2"></i> Grid 1: Config. do Bot</div>
-        <div class="menu-item" data-view="gerente" onclick="showView('gerente')"><i data-lucide="monitor-smartphone"></i> Grid 2: Gerente Ambiente</div>
-        <div class="menu-item" data-view="ia-vendas" onclick="showView('ia-vendas')"><i data-lucide="sparkles"></i> Grid 3: IA de Vendas</div>
-      </div>
-    </div>
-  </aside>
-
-  <main class="content" id="content"></main>
-</div>
-
-<div id="modalContainer"></div>
-<div id="toastContainer"></div>
-
-<script>
-const API_BASE = (window.location.protocol.startsWith('http')) ? window.location.origin : 'http://localhost:8080';
-let currentUser = JSON.parse(localStorage.getItem('erp_user') || 'null');
-let currentView = 'dashboard';
-
-// ===== API HELPERS =====
-async function apiGET(path){
-  try{
-    const r = await fetch(API_BASE + path);
-    return await r.json();
-  }catch(e){ return {erro:'Servidor offline: '+e.message}; }
-}
-async function apiPOST(path, data){
-  try{
-    const r = await fetch(API_BASE + path, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data||{})});
-    return await r.json();
-  }catch(e){ return {erro:'Servidor offline: '+e.message}; }
-}
-function toast(msg, tipo='success'){
-  const t = document.createElement('div');
-  t.className = 'toast '+tipo;
-  t.textContent = msg;
-  document.getElementById('toastContainer').appendChild(t);
-  setTimeout(()=>t.remove(), 3000);
-}
-function fmt(v){ return 'R$ ' + (parseFloat(v||0)).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
-function userPayload(){ return {usuario:{matricula: currentUser ? currentUser.matricula : 'AP-2026-0001'}}; }
-
-// ===== LOGIN =====
-async function fazerLogin(){
-  const mat = document.getElementById('loginMatricula').value;
-  const senha = document.getElementById('loginSenha').value;
-  const r = await apiPOST('/api/login', {matricula:mat, senha});
-  if(r.sucesso){
-    currentUser = r.usuario;
-    localStorage.setItem('erp_user', JSON.stringify(r.usuario));
-    document.getElementById('loginScreen').classList.add('hidden');
-    document.getElementById('app').classList.remove('hidden');
-    document.querySelector('.user-avatar').textContent = (r.usuario.nome||'AD').substring(0,2).toUpperCase();
-    showView('dashboard');
-    lucide.createIcons();
-  } else {
-    document.getElementById('loginError').textContent = r.erro || 'Erro ao entrar';
-  }
-}
-function fazerLogout(){
-  localStorage.removeItem('erp_user');
-  location.reload();
-}
-if(currentUser){
-  document.getElementById('loginScreen').classList.add('hidden');
-  document.getElementById('app').classList.remove('hidden');
-  document.querySelector('.user-avatar').textContent = (currentUser.nome||'AD').substring(0,2).toUpperCase();
-}
-
-// ===== NAVEGACAO =====
-function toggleGroup(el){ el.parentElement.classList.toggle('collapsed'); }
-function toggleSidebar(){ document.getElementById('sidebar').classList.toggle('hidden'); }
-function showView(view){
-  currentView = view;
-  document.querySelectorAll('.menu-item').forEach(m=>m.classList.toggle('active', m.dataset.view===view));
-  const renderers = {
-    dashboard: renderDashboard, caixa: renderCaixa, produtos: renderProdutos,
-    clientes: renderClientes, fornecedores: renderFornecedores, funcionarios: renderFuncionarios,
-    vendas: renderVendas, comandas: renderComandas, 'pedidos-site': renderPedidosSite,
-    estoque: renderEstoque, movimentos: renderMovimentos, contas: renderContas,
-    tesouraria: renderTesouraria, autorizacoes: renderAutorizacoes, ponto: renderPonto,
-    ferias: renderFerias, holerites: renderHolerites, logistica: renderLogistica,
-    'bot-config': renderBotConfig, gerente: renderGerente, 'ia-vendas': renderIAVendas
-  };
-  (renderers[view] || renderDashboard)();
-  lucide.createIcons();
-}
-
-// ===== DASHBOARD =====
-async function renderDashboard(){
-  const c = document.getElementById('content');
-  const hora = new Date().getHours();
-  const saud = hora<12?'Bom dia':hora<18?'Boa tarde':'Boa noite';
-  c.innerHTML = `<h1 class="page-title">${saud}, ${(currentUser?.nome||'Gerente').split(' ')[0]}!</h1>
-    <p class="page-sub">Aqui estÃ¡ o resumo da sua panificadora hoje.</p>
-    <div class="kpi-grid" id="kpiGrid">
-      <div class="kpi-card"><div class="kpi-icon" style="background:#dbeafe"><i data-lucide="wallet" style="color:#2563eb"></i></div><div><div class="kpi-label">Saldo em Bancos</div><div class="kpi-value" id="kpiBancos">---</div><div class="kpi-sub">Total disponÃ­vel</div></div></div>
-      <div class="kpi-card"><div class="kpi-icon" style="background:var(--accent-soft)"><i data-lucide="arrow-down-left" style="color:var(--accent-dark)"></i></div><div><div class="kpi-label">A Receber Hoje</div><div class="kpi-value" id="kpiReceber">---</div><div class="kpi-sub">TÃ­tulos vencendo hoje</div></div></div>
-      <div class="kpi-card"><div class="kpi-icon" style="background:var(--danger-soft)"><i data-lucide="arrow-up-right" style="color:var(--danger)"></i></div><div><div class="kpi-label">A Pagar Hoje</div><div class="kpi-value" id="kpiPagar">---</div><div class="kpi-sub">Contas vencendo hoje</div></div></div>
-      <div class="kpi-card"><div class="kpi-icon" style="background:#fef3c7"><i data-lucide="shopping-bag" style="color:#92400e"></i></div><div><div class="kpi-label">Vendas Hoje</div><div class="kpi-value" id="kpiVendasHoje">---</div><div class="kpi-sub">Total vendido</div></div></div>
-      <div class="kpi-card"><div class="kpi-icon" style="background:#f3e8ff"><i data-lucide="calendar" style="color:#7c3aed"></i></div><div><div class="kpi-label">Vendas no MÃªs</div><div class="kpi-value" id="kpiVendasMes">---</div><div class="kpi-sub">Acumulado do mÃªs</div></div></div>
-      <div class="kpi-card"><div class="kpi-icon" style="background:#fee2e2"><i data-lucide="package-x" style="color:var(--danger)"></i></div><div><div class="kpi-label">Estoque Baixo</div><div class="kpi-value" id="kpiEstoque">---</div><div class="kpi-sub">Produtos abaixo do mÃ­nimo</div></div></div>
-    </div>
-    <div class="grid-2">
-      <div class="card"><div class="card-header"><div><div class="card-title"><i data-lucide="trending-up"></i> Acompanhe o fluxo de vendas</div><div class="card-sub">Total vendido por dia nos Ãºltimos 7 dias</div></div></div><div class="chart-container" id="chartVendas"></div></div>
-      <div class="card"><div class="card-header"><div><div class="card-title"><i data-lucide="bell-ring"></i> Alertas do Sistema</div><div class="card-sub">Itens que precisam da sua atenÃ§Ã£o</div></div></div><div id="alertasBox"></div></div>
-    </div>
-    <div class="card"><div class="card-header"><div><div class="card-title"><i data-lucide="grid-2x2"></i> MÃ³dulos e Aplicativos</div><div class="card-sub">Acesse rapidamente as Ã¡reas do sistema</div></div></div>
-      <div class="app-grid">
-        <div class="app-tile" onclick="showView('caixa')"><div class="app-tile-icon" style="background:#16a34a"><i data-lucide="cash-register"></i></div><div><div class="app-tile-name">PDV / Caixa</div><div class="app-tile-desc">Abra o caixa e realize vendas</div></div></div>
-        <div class="app-tile" onclick="showView('produtos')"><div class="app-tile-icon" style="background:#2563eb"><i data-lucide="package"></i></div><div><div class="app-tile-name">Produtos</div><div class="app-tile-desc">Cadastre e gerencie produtos</div></div></div>
-        <div class="app-tile" onclick="showView('estoque')"><div class="app-tile-icon" style="background:#f59e0b"><i data-lucide="boxes"></i></div><div><div class="app-tile-name">Estoque WMS</div><div class="app-tile-desc">Controle de estoque e endereÃ§os</div></div></div>
-        <div class="app-tile" onclick="showView('contas')"><div class="app-tile-icon" style="background:#dc2626"><i data-lucide="file-text"></i></div><div><div class="app-tile-name">Financeiro</div><div class="app-tile-desc">Contas a pagar e receber</div></div></div>
-        <div class="app-tile" onclick="showView('ia-vendas')"><div class="app-tile-icon" style="background:#7c3aed"><i data-lucide="sparkles"></i></div><div><div class="app-tile-name">IA de Vendas</div><div class="app-tile-desc">Chatbot com recomendaÃ§Ãµes</div></div></div>
-        <div class="app-tile" onclick="showView('bot-config')"><div class="app-tile-icon" style="background:#0891b2"><i data-lucide="bot"></i></div><div><div class="app-tile-name">Configurar Bot</div><div class="app-tile-desc">Personalize o atendimento</div></div></div>
-        <div class="app-tile" onclick="showView('pedidos-site')"><div class="app-tile-icon" style="background:#db2777"><i data-lucide="globe"></i></div><div><div class="app-tile-name">Pedidos do Site</div><div class="app-tile-desc">Pedidos online e delivery</div></div></div>
-        <div class="app-tile" onclick="showView('ponto')"><div class="app-tile-icon" style="background:#4f46e5"><i data-lucide="clock"></i></div><div><div class="app-tile-name">Ponto RH</div><div class="app-tile-desc">Registre ponto dos funcionÃ¡rios</div></div></div>
-      </div>
-    </div>`;
-  lucide.createIcons();
-
-  const r = await apiGET('/api/dashboard/resumo');
-  if(!r.erro){
-    document.getElementById('kpiBancos').textContent = fmt(r.saldo_bancos);
-    document.getElementById('kpiReceber').textContent = fmt(r.receber_hoje);
-    document.getElementById('kpiPagar').textContent = fmt(r.pagar_hoje);
-    document.getElementById('kpiVendasHoje').textContent = fmt(r.vendas_hoje);
-    document.getElementById('kpiVendasMes').textContent = fmt(r.vendas_mes);
-    document.getElementById('kpiEstoque').textContent = r.estoque_baixo;
-    const dias = (r.vendas_7d||[]).map(v=>new Date(v.dia).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}));
-    const vals = (r.vendas_7d||[]).map(v=>parseFloat(v.valor||0));
-    const chart = echarts.init(document.getElementById('chartVendas'));
-    chart.setOption({
-      tooltip:{trigger:'axis', formatter:p=>p[0].axisValue+'<br/>'+fmt(p[0].value)},
-      grid:{left:50,right:20,top:20,bottom:30},
-      xAxis:{type:'category',data:dias,axisLine:{lineStyle:{color:'#e2e8f0'}},axisLabel:{color:'#64748b'}},
-      yAxis:{type:'value',axisLabel:{color:'#64748b',formatter:v=>'R$'+v},splitLine:{lineStyle:{color:'#f1f5f9'}}},
-      series:[{type:'line',data:vals,smooth:true,lineStyle:{color:'#16a34a',width:3},
-        areaStyle:{color:{type:'linear',x:0,y:0,x2:0,y2:1,colorStops:[{offset:0,color:'rgba(22,163,74,.25)'},{offset:1,color:'rgba(22,163,74,0)'}]}},
-        itemStyle:{color:'#16a34a'}}]
-    });
-  }
-  const al = await apiGET('/api/gerente/alertas');
-  const ab = document.getElementById('alertasBox');
-  if(al.alertas && al.alertas.length){
-    ab.innerHTML = al.alertas.map(a=>`<div class="alert-item ${a.nivel}"><i data-lucide="${a.nivel==='critico'?'alert-octagon':a.nivel==='alerta'?'alert-triangle':'info'}"></i><span style="font-size:13px;font-weight:600">${a.mensagem}</span></div>`).join('');
-  } else {
-    ab.innerHTML = `<div class="empty-state"><i data-lucide="check-circle-2"></i><p>Tudo em ordem! Nenhum alerta no momento.</p></div>`;
-  }
-  lucide.createIcons();
-}
-
-// ===== CAIXA / PDV =====
-async function renderCaixa(){
-  const c = document.getElementById('content');
-  const st = await apiGET('/api/caixa/status-online');
-  const aberto = (st.caixas_abertos||[]).length > 0;
-  c.innerHTML = `<h1 class="page-title">Caixa / PDV</h1><p class="page-sub">Abra o caixa, registre vendas e movimentos.</p>
-    <div class="kpi-grid">
-      <div class="kpi-card"><div class="kpi-icon" style="background:${aberto?'var(--accent-soft)':'#fee2e2'}"><i data-lucide="${aberto?'check-circle':'x-circle'}" style="color:${aberto?'var(--accent-dark)':'var(--danger)'}"></i></div><div><div class="kpi-label">Status do Caixa</div><div class="kpi-value" style="font-size:18px">${aberto?'ABERTO':'FECHADO'}</div><div class="kpi-sub">${(st.caixas_abertos||[]).length} caixa(s) aberto(s)</div></div></div>
-      <div class="kpi-card"><div class="kpi-icon" style="background:#dbeafe"><i data-lucide="dollar-sign" style="color:#2563eb"></i></div><div><div class="kpi-label">Saldo em Movimentos</div><div class="kpi-value">${fmt(st.saldo_atual)}</div><div class="kpi-sub">Entradas - SaÃ­das</div></div></div>
-      <div class="kpi-card"><div class="kpi-icon" style="background:#fef3c7"><i data-lucide="shield-alert" style="color:#92400e"></i></div><div><div class="kpi-label">AutorizaÃ§Ãµes Pendentes</div><div class="kpi-value">${st.autorizacoes_pendentes||0}</div><div class="kpi-sub">Aguardando aprovaÃ§Ã£o</div></div></div>
-    </div>
-    <div class="grid-2">
-      <div class="card"><div class="card-title"><i data-lucide="cash-register"></i> ${aberto?'Registrar Venda':'Abrir Caixa'}</div>
-        ${aberto?`
-        <div class="form-grid" style="margin-top:14px">
-          <div class="form-group" style="grid-column:1/-1">
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="chkComanda" checked onchange="alternarModoVenda('comanda')"> Venda por comanda (nÂº da comanda)</label>
-            <select id="vComanda" style="margin-top:6px"><option value="">Carregando comandas...</option></select>
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:10px"><input type="checkbox" id="chkBalcao" onchange="alternarModoVenda('balcao')"> Cliente balcÃ£o (sem comanda) <span class="badge info">pede senha ADM</span></label>
-            <input id="vCliente" placeholder="BalcÃ£o" style="display:none;margin-top:6px">
-          </div>
-          <div class="form-group"><label>Forma Pagamento</label><select id="vPagto"><option>DINHEIRO</option><option>PIX</option><option>CARTAO</option><option>BOLETO</option></select></div>
-          <div class="form-group"><label>Produto</label><select id="vProduto"></select></div>
-          <div class="form-group"><label>Quantidade</label><input id="vQty" type="number" value="1" min="0.1" step="0.1"></div>
-          <div class="form-group"><label>Valor UnitÃ¡rio</label><input id="vPreco" type="number" step="0.01"></div>
-        </div>
-        <div class="form-actions"><button class="btn btn-primary" onclick="adicionarItemVenda()"><i data-lucide="plus"></i> Adicionar Item</button></div>
-        <div style="margin-top:14px"><table class="data-table"><thead><tr><th>Produto</th><th>Qtd</th><th>Unit.</th><th>Total</th></tr></thead><tbody id="itensVenda"><tr><td colspan="4" style="text-align:center;color:var(--muted)">Nenhum item</td></tr></tbody></table></div>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
-          <span style="font-weight:700;font-size:18px">Total: <span id="totalVenda">R$ 0,00</span></span>
-          <button class="btn btn-primary" onclick="finalizarVenda()"><i data-lucide="check"></i> Finalizar Venda</button>
-        </div>`:
-        `<div class="form-grid" style="margin-top:14px">
-          <div class="form-group"><label>Fundo Inicial (R$)</label><input id="fundoInicial" type="number" step="0.01" value="100"></div>
-        </div>
-        <div class="form-actions"><button class="btn btn-primary" onclick="abrirCaixa()"><i data-lucide="unlock"></i> Abrir Caixa</button></div>`}
-      </div>
-      <div class="card"><div class="card-title"><i data-lucide="arrow-left-right"></i> Movimento de Caixa</div>
-        <div class="form-grid" style="margin-top:14px">
-          <div class="form-group"><label>Tipo</label><select id="movTipo"><option>ENTRADA</option><option>SAIDA</option><option>SANGRIA</option><option>SUPRIMENTO</option></select></div>
-          <div class="form-group"><label>Valor</label><input id="movValor" type="number" step="0.01"></div>
-          <div class="form-group" style="grid-column:1/-1"><label>DescriÃ§Ã£o</label><input id="movDesc" placeholder="DescriÃ§Ã£o do movimento"></div>
-        </div>
-        <div class="form-actions">
-          <button class="btn btn-secondary" onclick="imprimirLog()"><i data-lucide="printer"></i> Imprimir Log</button>
-          ${aberto?`<button class="btn btn-secondary" onclick="fecharCaixa()"><i data-lucide="lock"></i> Fechar Caixa</button>`:''}
-          <button class="btn btn-primary" onclick="registrarMovimento()"><i data-lucide="check"></i> Registrar</button>
-        </div>
-        <div style="margin-top:16px"><div class="card-title" style="font-size:13px">Ãšltimos Movimentos</div>
-          <div id="ultimosMov" style="max-height:200px;overflow-y:auto;font-size:12px"></div></div>
-      </div>
-    </div>`;
-  lucide.createIcons();
-  carregarComandasAbertas();
-  const prods = await apiGET('/api/produtos');
-  const sel = document.getElementById('vProduto');
-  if(sel && prods.produtos) prods.produtos.forEach(p=>{
-    const o = document.createElement('option'); o.value=JSON.stringify({id:p.id,nome:p.nome,preco:p.preco_venda,sku:p.sku});
-    o.textContent = p.nome+' - R$ '+parseFloat(p.preco_venda).toFixed(2); sel.appendChild(o);
-  });
-  if(sel) sel.onchange = ()=>{ try{document.getElementById('vPreco').value=JSON.parse(sel.value).preco}catch(e){} };
-  const movs = await apiGET('/api/caixa/movimentos');
-  const um = document.getElementById('ultimosMov');
-  if(um && movs.movimentos) um.innerHTML = (movs.movimentos.slice(0,10)).map(m=>
-    `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><span>${m.tipo} - ${m.descricao||''}</span><span style="font-weight:700;color:${m.tipo==='ENTRADA'||m.tipo==='SUPRIMENTO'?'var(--accent-dark)':'var(--danger)'}">${fmt(m.valor)}</span></div>`).join('') || '<p style="color:var(--muted)">Nenhum movimento</p>';
-}
-
-let itensVendaTemp = [];
-function adicionarItemVenda(){
-  const sel = document.getElementById('vProduto');
-  if(!sel.value){ toast('Selecione um produto','error'); return; }
-  const p = JSON.parse(sel.value);
-  const qty = parseFloat(document.getElementById('vQty').value)||1;
-  const preco = parseFloat(document.getElementById('vPreco').value)||0;
-  itensVendaTemp.push({product_id:p.id,produto_nome:p.nome,sku:p.sku,qty,unit_price:preco,total:qty*preco});
-  atualizarItensVenda();
-}
-function atualizarItensVenda(){
-  const tb = document.getElementById('itensVenda');
-  if(!itensVendaTemp.length){ tb.innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--muted)">Nenhum item</td></tr>'; }
-  else { tb.innerHTML = itensVendaTemp.map((i,idx)=>`<tr><td>${i.produto_nome}</td><td>${i.qty}</td><td>${fmt(i.unit_price)}</td><td>${fmt(i.total)} <button class="btn btn-sm btn-danger" onclick="removerItem(${idx})" style="margin-left:8px">X</button></td></tr>`).join(''); }
-  const tot = itensVendaTemp.reduce((s,i)=>s+i.total,0);
-  document.getElementById('totalVenda').textContent = fmt(tot);
-}
-function removerItem(i){ itensVendaTemp.splice(i,1); atualizarItensVenda(); }
-function confirmarComSenha(acao, resumo){
-  // Pede a senha do PROPRIO usuario logado antes de qualquer lancamento (anti clique nervoso)
-  return new Promise(resolve=>{
-    const nome = currentUser ? (currentUser.nome || currentUser.matricula) : '';
-    document.getElementById('modalContainer').innerHTML = `<div class="modal-overlay">
-      <div class="modal"><h3><i data-lucide="lock"></i> Confirmar: ${acao}</h3>
-        ${resumo?`<p style="font-size:14px;font-weight:700;margin:10px 0;padding:10px;background:var(--accent-soft);border-radius:8px">${resumo}</p>`:''}
-        <p style="font-size:13px;color:var(--muted);margin:6px 0">Operador: <b>${nome}</b>. Digite a sua senha para confirmar.</p>
-        <div class="form-group"><label>Sua senha</label><input id="senhaUsuarioInput" type="password" autocomplete="current-password"></div>
-        <div class="form-actions">
-          <button class="btn btn-secondary" id="btnConfCancelar">Cancelar</button>
-          <button class="btn btn-primary" id="btnConfOk">Confirmar</button>
-        </div></div></div>`;
-    lucide.createIcons();
-    const fechar = v=>{ document.getElementById('modalContainer').innerHTML=''; resolve(v); };
-    const inp = document.getElementById('senhaUsuarioInput');
-    document.getElementById('btnConfCancelar').onclick = ()=>fechar(null);
-    document.getElementById('btnConfOk').onclick = ()=>fechar(inp.value || null);
-    inp.addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('btnConfOk').click(); if(e.key==='Escape') fechar(null); });
-    setTimeout(()=>inp.focus(), 50);
-  });
-}
-function erroSenhaUsuario(r){ return r && r.senha_usuario_necessaria; }
-
-function alternarModoVenda(modo){
-  const cc = document.getElementById('chkComanda'), cb = document.getElementById('chkBalcao');
-  if(modo==='comanda'){ cb.checked = !cc.checked; } else { cc.checked = !cb.checked; }
-  const balcao = cb.checked;
-  document.getElementById('vComanda').style.display = balcao ? 'none' : '';
-  document.getElementById('vCliente').style.display = balcao ? '' : 'none';
-}
-async function carregarComandasAbertas(){
-  const sel = document.getElementById('vComanda'); if(!sel) return;
-  const r = await apiGET('/api/comandas/abertas');
-  const lista = r.comandas || [];
-  sel.innerHTML = lista.length
-    ? '<option value="">Selecione o nÂº da comanda</option>' + lista.map(c=>`<option value="${c.id}">${c.numero} - ${c.cliente_nome||'sem nome'} (${fmt(c.total)})</option>`).join('')
-    : '<option value="">Nenhuma comanda aberta</option>';
-}
-function pedirSenhaAdm(titulo, extraHtml=''){
-  return new Promise(resolve=>{
-    document.getElementById('modalContainer').innerHTML = `<div class="modal-overlay" id="ovSenha">
-      <div class="modal"><h3><i data-lucide="shield-alert"></i> ${titulo}</h3>
-        <p style="font-size:13px;color:var(--muted);margin:8px 0">Digite a senha de um administrador para autorizar.</p>
-        ${extraHtml}
-        <div class="form-group"><label>Senha ADM</label><input id="senhaAdmInput" type="password" autofocus></div>
-        <div class="form-actions">
-          <button class="btn btn-secondary" id="btnSenhaCancelar">Cancelar</button>
-          <button class="btn btn-primary" id="btnSenhaOk">Autorizar</button>
-        </div></div></div>`;
-    lucide.createIcons();
-    const fechar = v=>{ document.getElementById('modalContainer').innerHTML=''; resolve(v); };
-    const inp = document.getElementById('senhaAdmInput');
-    document.getElementById('btnSenhaCancelar').onclick = ()=>fechar(null);
-    document.getElementById('btnSenhaOk').onclick = ()=>{
-      const motivo = document.getElementById('motivoEstorno');
-      fechar({senha: inp.value, motivo: motivo ? motivo.value : ''});
-    };
-    inp.addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('btnSenhaOk').click(); });
-    setTimeout(()=>inp.focus(), 50);
-  });
-}
-async function finalizarVenda(){
-  if(!itensVendaTemp.length){ toast('Adicione itens ha venda','error'); return; }
-  const balcao = document.getElementById('chkBalcao').checked;
-  const comanda_id = balcao ? null : document.getElementById('vComanda').value;
-  if(!balcao && !comanda_id){ toast('Selecione o nao da comanda ou marque Cliente balcao','error'); return; }
-  let senha_adm = null;
-  if(balcao){
-    const ok = await pedirSenhaAdm('Venda sem comanda (balcao)');
-    if(!ok || !ok.senha){ toast('Venda cancelada: senha ADM nÃ£o informada','error'); return; }
-    senha_adm = ok.senha;
-  }
-  const totalConf = itensVendaTemp.reduce((a,i)=>a+i.total,0);
-  const senha_usuario = await confirmarComSenha('Finalizar venda', 'Venda de '+fmt(totalConf)+' ('+itensVendaTemp.length+' item(ns)) - '+(balcao?'BalcÃ£o sem comanda':'Comanda selecionada'));
-  if(!senha_usuario){ toast('Venda nÃ£o confirmada','error'); return; }
-  const st = await apiGET('/api/caixa/status-online');
-  const caixa_id = (st.caixas_abertos||[])[0]?.id;
-  const r = await apiPOST('/api/venda/criar', {...userPayload(), senha_usuario,
-    cliente_nome: balcao ? (document.getElementById('vCliente').value||'BalcÃ£o') : undefined,
-    comanda_id: comanda_id ? parseInt(comanda_id) : null, senha_adm,
-    forma_pagamento:document.getElementById('vPagto').value, itens:itensVendaTemp, caixa_id});
-  if(r.sucesso){
-    toast('Venda #'+r.venda_id+' finalizada! Total '+fmt(r.total));
-    itensVendaTemp=[]; renderCaixa();
-    if(confirm('Imprimir cupom da venda #'+r.venda_id+'?')) imprimirCupom(r.venda_id);
-  } else toast(r.erro||'Erro ao finalizar','error');
-}
-async function estornarVenda(id){
-  const ok = await pedirSenhaAdm('Estornar venda #'+id,
-    '<div class="form-group"><label>Motivo do estorno</label><input id="motivoEstorno" placeholder="Ex.: lanÃ§amento errado"></div>');
-  if(!ok || !ok.senha){ toast('Estorno cancelado','error'); return; }
-  const senha_usuario = await confirmarComSenha('Estorno', 'Estornar a venda #'+id);
-  if(!senha_usuario){ toast('Estorno nÃ£o confirmado','error'); return; }
-  const r = await apiPOST('/api/venda/estornar', {...userPayload(), senha_usuario, venda_id:id, senha_adm:ok.senha, motivo:ok.motivo});
-  if(r.sucesso){ toast('Venda #'+id+' estornada'); renderVendas(); } else toast(r.erro||'Erro no estorno','error');
-}
-function abrirJanelaImpressao(titulo, corpoHtml, largura){
-  const w = window.open('', '_blank', 'width='+(largura||380)+',height=640');
-  if(!w){ toast('Libere pop-ups para imprimir','error'); return; }
-  w.document.write('<html><head><meta charset="utf-8"><title>'+titulo+'</title><style>'+
-    'body{font-family:"Courier New",monospace;font-size:12px;margin:8px;color:#000}'+
-    'h2{text-align:center;margin:4px 0}.c{text-align:center}.l{border-top:1px dashed #000;margin:6px 0}'+
-    'table{width:100%;border-collapse:collapse}td,th{padding:2px 0;text-align:left}td.r,th.r{text-align:right}'+
-    '@media print{button{display:none}}</style></head><body>'+corpoHtml+
-    '<p class="c"><button onclick="window.print()">Imprimir</button></p></body></html>');
-  w.document.close(); w.focus(); setTimeout(()=>w.print(), 400);
-}
-async function imprimirCupom(id){
-  const r = await apiGET('/api/venda/cupom?id='+id);
-  if(r.erro){ toast(r.erro,'error'); return; }
-  const v = r.venda, itens = r.itens||[];
-  const linhas = itens.map(i=>`<tr><td>${i.produto_nome||''}</td><td class="r">${parseFloat(i.qty)}x ${fmt(i.unit_price)}</td><td class="r">${fmt(i.total)}</td></tr>`).join('');
-  abrirJanelaImpressao('Cupom #'+id, `<h2>PANIFICADORA</h2><p class="c">CUPOM NÃƒO FISCAL</p><div class="l"></div>
-    <div>Venda: #${v.id}${v.status==='ESTORNADA'?' (ESTORNADA)':''}</div>
-    <div>Data: ${new Date(v.data).toLocaleString('pt-BR')}</div>
-    <div>${r.comanda_numero?('Comanda: '+r.comanda_numero):'Cliente: '+(v.cliente_nome||'BalcÃ£o')+' (sem comanda)'}</div>
-    <div>Operador: ${v.operador_matricula||'-'}</div><div class="l"></div>
-    <table><tr><th>Item</th><th class="r">Qtd x Unit</th><th class="r">Total</th></tr>${linhas}</table><div class="l"></div>
-    <table><tr><td><b>TOTAL</b></td><td class="r"><b>${fmt(v.total)}</b></td></tr>
-    <tr><td>Pagamento</td><td class="r">${v.forma_pagamento||'-'}</td></tr></table><div class="l"></div>
-    <p class="c">Obrigado, volte sempre!</p>`);
-}
-async function imprimirLog(){
-  const r = await apiGET('/api/log-caixa');
-  const linhas = (r.log||[]).map(l=>`<tr><td>${new Date(l.created_at).toLocaleString('pt-BR')}</td><td>${l.evento}</td><td>${l.matricula||'-'}</td><td>${l.autorizado_por||'-'}</td></tr>`).join('')
-    || '<tr><td colspan="4">Sem registros</td></tr>';
-  abrirJanelaImpressao('Log do Caixa', `<h2>LOG DE OPERAÃ‡Ã•ES DO CAIXA</h2><p class="c">Emitido em ${new Date().toLocaleString('pt-BR')}</p><div class="l"></div>
-    <table><tr><th>Data/Hora</th><th>Evento</th><th>Operador</th><th>Autorizou</th></tr>${linhas}</table>`, 720);
-}
-async function abrirCaixa(){
-  const fundo = document.getElementById('fundoInicial').value;
-  const senha_usuario = await confirmarComSenha('Abrir caixa', 'Fundo inicial: '+fmt(fundo));
-  if(!senha_usuario){ toast('Abertura nÃ£o confirmada','error'); return; }
-  const r = await apiPOST('/api/caixa/abrir', {...userPayload(), senha_usuario, fundo_inicial:fundo});
-  if(r.sucesso){ toast('Caixa aberto!'); renderCaixa(); } else toast(r.erro||'Erro','error');
-}
-async function fecharCaixa(){
-  const st = await apiGET('/api/caixa/status-online');
-  const cid = (st.caixas_abertos||[])[0]?.id;
-  const senha_usuario = await confirmarComSenha('Fechar caixa', 'Fechamento com saldo de '+fmt(st.saldo_atual));
-  if(!senha_usuario){ toast('Fechamento nÃ£o confirmado','error'); return; }
-  const r = await apiPOST('/api/caixa/fechar', {...userPayload(), senha_usuario, caixa_id:cid, valor_fechamento:st.saldo_atual});
-  if(r.sucesso){ toast('Caixa fechado!'); renderCaixa(); } else toast(r.erro||'Erro','error');
-}
-async function registrarMovimento(){
-  const st = await apiGET('/api/caixa/status-online');
-  const cid = (st.caixas_abertos||[])[0]?.id;
-  const tipoMov = document.getElementById('movTipo').value, valorMov = document.getElementById('movValor').value;
-  const senha_usuario = await confirmarComSenha('Movimento de caixa', tipoMov+' de '+fmt(valorMov));
-  if(!senha_usuario){ toast('Movimento nÃ£o confirmado','error'); return; }
-  const r = await apiPOST('/api/caixa/movimento', {...userPayload(), senha_usuario, caixa_id:cid,
-    tipo:document.getElementById('movTipo').value, valor:document.getElementById('movValor').value,
-    descricao:document.getElementById('movDesc').value});
-  if(r.sucesso){ toast('Movimento registrado!'); renderCaixa(); }
-  else if(r.autorizacao_pendente){ toast('Movimento enviado para autorizaÃ§Ã£o','warn'); }
-  else toast(r.erro||'Erro','error');
-}
-
-// ===== CRUD GENERICO =====
-function tabelaSimples(dados, colunas, acoes){
-  if(!dados || !dados.length) return `<div class="empty-state"><i data-lucide="inbox"></i><p>Nenhum registro encontrado</p></div>`;
-  return `<table class="data-table"><thead><tr>${colunas.map(c=>`<th>${c.titulo}</th>`).join('')}${acoes?'<th>AÃ§Ãµes</th>':''}</tr></thead>
-    <tbody>${dados.map((d,i)=>`<tr>${colunas.map(c=>`<td>${c.render?c.render(d):(d[c.chave]??'-')}</td>`).join('')}${acoes?`<td>${acoes(d,i)}</td>`:''}</tr>`).join('')}</tbody></table>`;
-}
-
-// ===== PRODUTOS =====
-async function renderProdutos(){
-  const c = document.getElementById('content');
-  c.innerHTML = `<h1 class="page-title">Produtos</h1><p class="page-sub">Cadastre produtos, receitas e controle a produÃ§Ã£o.</p>
-    <div style="display:flex;gap:8px;margin-bottom:16px">
-      <button class="btn btn-primary" id="tabProd" onclick="tabProdutos('prod')"><i data-lucide="package"></i> Produtos</button>
-      <button class="btn btn-secondary" id="tabProd2" onclick="tabProdutos('prod')"><i data-lucide="plus"></i> Novo Produto</button>
-      <button class="btn btn-secondary" id="tabProdBtn" onclick="tabProdutos('producao')"><i data-lucide="chef-hat"></i> ProduÃ§Ã£o / Insumos</button>
-    </div>
-    <div id="abaProdutos">
-      <div class="card" id="produtosTable"><div class="empty-state"><i data-lucide="loader-2"></i><p>Carregando...</p></div></div>
-    </div>
-    <div id="abaProducao" class="hidden"></div>`;
-  lucide.createIcons();
-  const r = await apiGET('/api/produtos');
-  window._produtosLista = r.produtos || [];
-  document.getElementById('produtosTable').innerHTML = tabelaSimples(r.produtos, [
-    {chave:'sku',titulo:'SKU'}, {chave:'nome',titulo:'Nome'},
-    {chave:'categoria',titulo:'Categoria',render:d=>`<span class="badge info">${d.categoria||'-'}</span>`},
-    {chave:'preco_venda',titulo:'PreÃ§o',render:d=>fmt(d.preco_venda)},
-    {chave:'status',titulo:'Status',render:d=>`<span class="badge ${d.status==='ATIVO'?'ok':'danger'}">${d.status||'-'}</span>`}
-  ], d=>`<button class="btn btn-sm btn-secondary" onclick="modalProduto(${JSON.stringify(d).replace(/"/g,'&quot;')})"><i data-lucide="pencil"></i></button>`);
-  // Novo Produto button
-  document.getElementById('tabProd2').outerHTML = `<button class="btn btn-primary" onclick="modalProduto()"><i data-lucide="plus"></i> Novo Produto</button>`;
-  lucide.createIcons();
-}
-
-function tabProdutos(aba){
-  document.getElementById('abaProdutos').classList.toggle('hidden', aba!=='prod');
-  document.getElementById('abaProducao').classList.toggle('hidden', aba!=='producao');
-  document.getElementById('tabProd').className = aba==='prod'?'btn btn-primary':'btn btn-secondary';
-  document.getElementById('tabProdBtn').className = aba==='producao'?'btn btn-primary':'btn btn-secondary';
-  if(aba==='producao') renderProducao();
-}
-
-async function renderProducao(){
-  const prods = window._produtosLista || (await apiGET('/api/produtos')).produtos || [];
-  const insumos = prods.filter(p=>p.categoria==='Insumos');
-  const acabados = prods.filter(p=>p.categoria!=='Insumos');
-  document.getElementById('abaProducao').innerHTML = `
-    <div class="grid-2">
-      <div class="card">
-        <div class="card-title"><i data-lucide="chef-hat"></i> 1. Receita do Produto</div>
-        <p class="card-sub" style="margin-bottom:12px">Selecione o produto acabado e cadastre quais insumos entram na receita.</p>
-        <div class="form-group" style="margin-bottom:12px"><label>Produto a produzir</label>
-          <select id="prodSelecionado" onchange="carregarReceita()">
-            <option value="">Selecione...</option>
-            ${acabados.map(p=>`<option value="${p.id}">${p.nome}</option>`).join('')}
-          </select></div>
-        <div id="receitaLista" style="margin-bottom:12px"><p style="color:var(--muted);font-size:13px">Selecione um produto para ver a receita.</p></div>
-        <div class="form-grid">
-          <div class="form-group"><label>Insumo</label><select id="insumoSel">
-            <option value="">Selecione...</option>
-            ${insumos.map(p=>`<option value="${p.id}" data-nome="${p.nome}">${p.nome}</option>`).join('')}
-          </select></div>
-          <div class="form-group"><label>Qtd por unidade</label><input id="insumoQtd" type="number" step="0.01" placeholder="Ex: 0.2"></div>
-          <div class="form-group"><label>Unidade</label><select id="insumoUn"><option>UN</option><option>KG</option><option>G</option><option>L</option><option>ML</option></select></div>
-        </div>
-        <div class="form-actions"><button class="btn btn-primary btn-sm" onclick="addInsumoReceita()"><i data-lucide="plus"></i> Adicionar Insumo</button></div>
-      </div>
-      <div class="card">
-        <div class="card-title"><i data-lucide="calculator"></i> 2. Calculadora de ProduÃ§Ã£o</div>
-        <p class="card-sub" style="margin-bottom:12px">Simule antes de produzir â€” o sistema avisa se falta insumo.</p>
-        <div class="form-grid">
-          <div class="form-group"><label>Quantidade a produzir</label><input id="qtdProduzir" type="number" step="1" value="10" min="1"></div>
-        </div>
-        <div class="form-actions" style="justify-content:flex-start"><button class="btn btn-primary" onclick="simularProducao()"><i data-lucide="play"></i> Simular ProduÃ§Ã£o</button></div>
-        <div id="resultadoSimulacao" style="margin-top:14px"></div>
-      </div>
-    </div>`;
-  lucide.createIcons();
-}
-
-async function carregarReceita(){
-  const pid = document.getElementById('prodSelecionado').value;
-  const box = document.getElementById('receitaLista');
-  if(!pid){ box.innerHTML='<p style="color:var(--muted);font-size:13px">Selecione um produto.</p>'; return; }
-  box.innerHTML = '<p style="color:var(--muted);font-size:13px">Carregando...</p>';
-  const r = await apiGET('/api/producao/receitas?produto_id='+pid);
-  const rec = r.receitas || [];
-  if(!rec.length){ box.innerHTML='<p style="color:var(--muted);font-size:13px">Nenhum insumo na receita. Adicione abaixo.</p>'; return; }
-  box.innerHTML = `<table class="data-table"><thead><tr><th>Insumo</th><th>Qtd/unidade</th><th>Un.</th><th></th></tr></thead><tbody>
-    ${rec.map(i=>`<tr><td>${i.insumo_nome}</td><td>${i.quantidade_por_unidade}</td><td>${i.unidade||'UN'}</td>
-    <td><button class="btn btn-sm btn-danger" onclick="excluirInsumo(${i.id})"><i data-lucide="trash-2"></i></button></td></tr>`).join('')}
-    </tbody></table>`;
-  lucide.createIcons();
-}
-
-async function addInsumoReceita(){
-  const pid = document.getElementById('prodSelecionado').value;
-  const sel = document.getElementById('insumoSel');
-  const insumo_id = sel.value;
-  const insumo_nome = sel.options[sel.selectedIndex]?.text || '';
-  const qtd = document.getElementById('insumoQtd').value;
-  if(!pid || !insumo_id || !qtd){ toast('Selecione produto, insumo e quantidade','error'); return; }
-  const r = await apiPOST('/api/producao/receita/salvar', {...userPayload(), produto_id:pid, insumo_id, insumo_nome, quantidade_por_unidade:qtd, unidade:document.getElementById('insumoUn').value});
-  if(r.sucesso){ toast('Insumo adicionado!'); document.getElementById('insumoQtd').value=''; carregarReceita(); }
-  else toast(r.erro||'Erro','error');
-}
-
-async function excluirInsumo(id){
-  const r = await apiPOST('/api/producao/receita/excluir', {...userPayload(), id});
-  if(r.sucesso){ toast('Removido!'); carregarReceita(); }
-}
-
-async function simularProducao(){
-  const pid = document.getElementById('prodSelecionado').value;
-  const qtd = document.getElementById('qtdProduzir').value;
-  const box = document.getElementById('resultadoSimulacao');
-  if(!pid){ toast('Selecione o produto','error'); return; }
-  box.innerHTML = '<p style="color:var(--muted);font-size:13px">Simulando...</p>';
-  const r = await apiPOST('/api/producao/simular', {produto_id:pid, qtd});
-  if(!r.sucesso){ box.innerHTML = `<div class="alert-item alerta"><i data-lucide="alert-triangle"></i><span style="font-size:13px">${r.mensagem}</span></div>`; lucide.createIcons(); return; }
-  window._simulacao = r;
-  let html = `<table class="data-table"><thead><tr><th>Insumo</th><th>NecessÃ¡rio</th><th>DisponÃ­vel</th><th>Status</th></tr></thead><tbody>`;
-  r.ingredientes.forEach(i=>{
-    html += `<tr><td>${i.insumo}</td><td>${i.necessario} ${i.unidade}</td><td>${i.disponivel} ${i.unidade}</td>
-      <td>${i.suficiente?'<span class="badge ok">OK</span>':'<span class="badge danger">FALTA</span>'}</td></tr>`;
-  });
-  html += `</tbody></table>`;
-  if(r.falta_insumo){
-    html += `<div class="alert-item critico" style="margin-top:12px"><i data-lucide="alert-octagon"></i><span style="font-size:13px;font-weight:700">Falta insumo! NÃ£o Ã© possÃ­vel produzir ${r.qtd_produzir} unidades. Compre ou ajuste a quantidade.</span></div>`;
-  } else {
-    html += `<div class="alert-item" style="margin-top:12px;background:var(--accent-soft);border-color:#bbf7d0"><i data-lucide="check-circle-2" style="color:var(--accent-dark)"></i><span style="font-size:13px;font-weight:700">Tudo disponÃ­vel! Pode produzir ${r.qtd_produzir} unidades.</span>
-      <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="confirmarProducao()"><i data-lucide="check"></i> Confirmar ProduÃ§Ã£o</button></div>`;
-  }
-  box.innerHTML = html;
-  lucide.createIcons();
-}
-
-async function confirmarProducao(){
-  const s = window._simulacao;
-  const r = await apiPOST('/api/producao/confirmar', {...userPayload(), produto_id:s.produto.id, qtd:s.qtd_produzir});
-  if(r.sucesso){ toast(r.mensagem); document.getElementById('resultadoSimulacao').innerHTML=''; simularProducao(); }
-  else toast(r.mensagem||r.erro||'Erro','error');
-}
-
-function modalProduto(p){
-  p = p || {};
-  document.getElementById('modalContainer').innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)this.remove()">
-    <div class="modal"><h3><i data-lucide="package"></i> ${p.id?'Editar':'Novo'} Produto</h3>
-      <div class="form-grid">
-        <div class="form-group"><label>Nome *</label><input id="pNome" value="${p.nome||''}"></div>
-        <div class="form-group"><label>SKU</label><input id="pSku" value="${p.sku||''}"></div>
-        <div class="form-group"><label>Categoria</label><select id="pCat"><option>PÃ£es</option><option>Bolos</option><option>Doces</option><option>Bebidas</option><option>Salgados</option><option>Insumos</option></select></div>
-        <div class="form-group"><label>PreÃ§o Venda</label><input id="pPreco" type="number" step="0.01" value="${p.preco_venda||0}"></div>
-        <div class="form-group"><label>Custo</label><input id="pCusto" type="number" step="0.01" value="${p.custo||0}"></div>
-        <div class="form-group"><label>Estoque MÃ­nimo</label><input id="pMin" type="number" step="0.1" value="${p.estoque_minimo||0}"></div>
-      </div>
-      <div class="form-actions"><button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
-      <button class="btn btn-primary" onclick="salvarProduto(${p.id||'null'})"><i data-lucide="save"></i> Salvar</button></div></div></div>`;
-  if(p.categoria) document.getElementById('pCat').value = p.categoria;
-  lucide.createIcons();
-}
-async function salvarProduto(id){
-  const r = await apiPOST('/api/produtos/salvar', {...userPayload(), id,
-    nome:document.getElementById('pNome').value, sku:document.getElementById('pSku').value,
-    categoria:document.getElementById('pCat').value, preco_venda:document.getElementById('pPreco').value,
-    custo:document.getElementById('pCusto').value, estoque_minimo:document.getElementById('pMin').value});
-  if(r.sucesso){ toast('Produto salvo!'); document.querySelector('.modal-overlay').remove(); renderProdutos(); }
-  else toast(r.erro||'Erro','error');
-}
-
-// ===== CLIENTES =====
-async function renderClientes(){
-  const c = document.getElementById('content');
-  c.innerHTML = `<h1 class="page-title">Clientes</h1><p class="page-sub">Cadastro de clientes.</p>
-    <div class="card"><button class="btn btn-primary" onclick="modalCliente()"><i data-lucide="plus"></i> Novo Cliente</button></div>
-    <div class="card" id="cliTable"><div class="empty-state"><i data-lucide="loader-2"></i><p>Carregando...</p></div></div>`;
-  lucide.createIcons();
-  const r = await apiGET('/api/clientes');
-  document.getElementById('cliTable').innerHTML = tabelaSimples(r.clientes, [
-    {chave:'nome',titulo:'Nome'}, {chave:'cpf_cnpj',titulo:'CPF/CNPJ'},
-    {chave:'telefone',titulo:'Telefone'}, {chave:'email',titulo:'Email'}
-  ]);
-  lucide.createIcons();
-}
-function modalCliente(){
-  document.getElementById('modalContainer').innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)this.remove()">
-    <div class="modal"><h3><i data-lucide="user-plus"></i> Novo Cliente</h3>
-      <div class="form-grid">
-        <div class="form-group"><label>Nome *</label><input id="cNome"></div>
-        <div class="form-group"><label>CPF/CNPJ</label><input id="cDoc"></div>
-        <div class="form-group"><label>Telefone</label><input id="cTel"></div>
-        <div class="form-group"><label>Email</label><input id="cEmail"></div>
-        <div class="form-group" style="grid-column:1/-1"><label>EndereÃ§o</label><input id="cEnd"></div>
-      </div>
-      <div class="form-actions"><button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
-      <button class="btn btn-primary" onclick="salvarCliente()"><i data-lucide="save"></i> Salvar</button></div></div></div>`;
-  lucide.createIcons();
-}
-async function salvarCliente(){
-  const r = await apiPOST('/api/clientes/salvar', {...userPayload(),
-    nome:document.getElementById('cNome').value, cpf_cnpj:document.getElementById('cDoc').value,
-    telefone:document.getElementById('cTel').value, email:document.getElementById('cEmail').value,
-    endereco:document.getElementById('cEnd').value});
-  if(r.sucesso){ toast('Cliente salvo!'); document.querySelector('.modal-overlay').remove(); renderClientes(); }
-  else toast(r.erro||'Erro','error');
-}
-
-// ===== FORNECEDORES =====
-async function renderFornecedores(){
-  const c = document.getElementById('content');
-  c.innerHTML = `<h1 class="page-title">Fornecedores</h1><p class="page-sub">Fornecedores de insumos e serviÃ§os.</p>
-    <div class="card"><button class="btn btn-primary" onclick="modalFornecedor()"><i data-lucide="plus"></i> Novo Fornecedor</button></div>
-    <div class="card" id="fornTable"><div class="empty-state"><i data-lucide="loader-2"></i><p>Carregando...</p></div></div>`;
-  lucide.createIcons();
-  const r = await apiGET('/api/fornecedores');
-  document.getElementById('fornTable').innerHTML = tabelaSimples(r.fornecedores, [
-    {chave:'nome',titulo:'Nome'}, {chave:'cnpj',titulo:'CNPJ'},
-    {chave:'telefone',titulo:'Telefone'}, {chave:'email',titulo:'Email'},
-    {chave:'status',titulo:'Status',render:d=>`<span class="badge ok">${d.status||'ATIVO'}</span>`}
-  ]);
-  lucide.createIcons();
-}
-function modalFornecedor(){
-  document.getElementById('modalContainer').innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)this.remove()">
-    <div class="modal"><h3><i data-lucide="truck"></i> Novo Fornecedor</h3>
-      <div class="form-grid">
-        <div class="form-group"><label>Nome *</label><input id="fNome"></div>
-        <div class="form-group"><label>CNPJ</label><input id="fCnpj"></div>
-        <div class="form-group"><label>Telefone</label><input id="fTel"></div>
-        <div class="form-group"><label>Email</label><input id="fEmail"></div>
-        <div class="form-group" style="grid-column:1/-1"><label>EndereÃ§o</label><input id="fEnd"></div>
-      </div>
-      <div class="form-actions"><button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
-      <button class="btn btn-primary" onclick="salvarFornecedor()"><i data-lucide="save"></i> Salvar</button></div></div></div>`;
-  lucide.createIcons();
-}
-async function salvarFornecedor(){
-  const r = await apiPOST('/api/fornecedores/salvar', {...userPayload(),
-    nome:document.getElementById('fNome').value, cnpj:document.getElementById('fCnpj').value,
-    telefone:document.getElementById('fTel').value, email:document.getElementById('fEmail').value,
-    endereco:document.getElementById('fEnd').value});
-  if(r.sucesso){ toast('Fornecedor salvo!'); document.querySelector('.modal-overlay').remove(); renderFornecedores(); }
-  else toast(r.erro||'Erro','error');
-}
-
-// ===== FUNCIONARIOS =====
-async function renderFuncionarios(){
-  const c = document.getElementById('content');
-  c.innerHTML = `<h1 class="page-title">FuncionÃ¡rios</h1><p class="page-sub">Equipe e acessos ao sistema.</p>
-    <div class="card"><button class="btn btn-primary" onclick="modalFuncionario()"><i data-lucide="plus"></i> Novo FuncionÃ¡rio</button></div>
-    <div class="card" id="funcTable"><div class="empty-state"><i data-lucide="loader-2"></i><p>Carregando...</p></div></div>`;
-  lucide.createIcons();
-  const r = await apiGET('/api/funcionarios');
-  document.getElementById('funcTable').innerHTML = tabelaSimples(r.funcionarios, [
-    {chave:'matricula',titulo:'MatrÃ­cula'}, {chave:'nome',titulo:'Nome'},
-    {chave:'cargo',titulo:'Cargo'}, {chave:'role',titulo:'Perfil',render:d=>`<span class="badge ${d.role==='admin'?'warn':'info'}">${d.role||'-'}</span>`},
-    {chave:'status',titulo:'Status',render:d=>`<span class="badge ${d.status==='ATIVO'?'ok':'danger'}">${d.status||'-'}</span>`}
-  ]);
-  lucide.createIcons();
-}
-function modalFuncionario(){
-  document.getElementById('modalContainer').innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)this.remove()">
-    <div class="modal"><h3><i data-lucide="user-cog"></i> Novo FuncionÃ¡rio</h3>
-      <div class="form-grid">
-        <div class="form-group"><label>MatrÃ­cula *</label><input id="fuMat" placeholder="OP-2026-0006"></div>
-        <div class="form-group"><label>Nome *</label><input id="fuNome"></div>
-        <div class="form-group"><label>Cargo</label><input id="fuCargo"></div>
-        <div class="form-group"><label>Perfil</label><select id="fuRole"><option>operador</option><option>gerente</option><option>admin</option><option>financeiro</option></select></div>
-        <div class="form-group"><label>Senha inicial</label><input id="fuSenha" value="123"></div>
-        <div class="form-group"><label>SalÃ¡rio</label><input id="fuSal" type="number" step="0.01" value="1500"></div>
-      </div>
-      <div class="form-actions"><button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
-      <button class="btn btn-primary" onclick="salvarFuncionario()"><i data-lucide="save"></i> Salvar</button></div></div></div>`;
-  lucide.createIcons();
-}
-async function salvarFuncionario(){
-  const r = await apiPOST('/api/funcionarios/salvar', {...userPayload(),
-    matricula:document.getElementById('fuMat').value, nome:document.getElementById('fuNome').value,
-    cargo:document.getElementById('fuCargo').value, role:document.getElementById('fuRole').value,
-    senha:document.getElementById('fuSenha').value, salario:document.getElementById('fuSal').value});
-  if(r.sucesso){ toast('FuncionÃ¡rio salvo!'); document.querySelector('.modal-overlay').remove(); renderFuncionarios(); }
-  else toast(r.erro||'Erro','error');
-}
-
-// ===== VENDAS =====
-async function renderVendas(){
-  const c = document.getElementById('content');
-  c.innerHTML = `<h1 class="page-title">Vendas</h1><p class="page-sub">HistÃ³rico de vendas realizadas. <button class="btn btn-sm btn-secondary" onclick="imprimirLog()">Imprimir Log</button></p>
-    <div class="card" id="vendasTable"><div class="empty-state"><i data-lucide="loader-2"></i><p>Carregando...</p></div></div>`;
-  lucide.createIcons();
-  const r = await apiGET('/api/vendas');
-  document.getElementById('vendasTable').innerHTML = tabelaSimples(r.vendas, [
-    {chave:'id',titulo:'#'}, {chave:'data',titulo:'Data',render:d=>new Date(d.data).toLocaleString('pt-BR')},
-    {chave:'cliente_nome',titulo:'Cliente'}, {chave:'forma_pagamento',titulo:'Pagamento',render:d=>`<span class="badge info">${d.forma_pagamento||'-'}</span>`},
-    {chave:'origem',titulo:'Origem'}, {chave:'total',titulo:'Total',render:d=>fmt(d.total)},
-    {chave:'status',titulo:'Status',render:d=>`<span class="badge ${d.status==='ESTORNADA'?'danger':'ok'}">${d.status||'-'}</span>`},
-    {chave:'acoes',titulo:'AÃ§Ãµes',render:d=>`<button class="btn btn-sm btn-secondary" onclick="imprimirCupom(${d.id})">Cupom</button> `+
-      (d.status==='ESTORNADA'?'':`<button class="btn btn-sm btn-danger" onclick="estornarVenda(${d.id})">Estornar</button>`)}
-  ]);
-  lucide.createIcons();
-}
-
-// ===== COMANDAS =====
-async function renderComandas(){
-  const c = document.getElementById('content');
-  c.innerHTML = `<h1 class="page-title">Comandas</h1><p class="page-sub">Comandas abertas e histÃ³rico.</p>
-    <div class="card"><button class="btn btn-primary" onclick="criarComanda()"><i data-lucide="plus"></i> Nova Comanda</button></div>
-    <div class="card" id="cmdTable"><div class="empty-state"><i data-lucide="loader-2"></i><p>Carregando...</p></div></div>`;
-  lucide.createIcons();
-  const r = await apiGET('/api/comandas');
-  document.getElementById('cmdTable').innerHTML = tabelaSimples(r.comandas, [
-    {chave:'numero',titulo:'NÃºmero'}, {chave:'cliente_nome',titulo:'Cliente'},
-    {chave:'total',titulo:'Total',render:d=>fmt(d.total)},
-    {chave:'status',titulo:'Status',render:d=>`<span class="badge ${d.status==='ABERTA'?'warn':'ok'}">${d.status||'-'}</span>`},
-    {chave:'entrada_at',titulo:'Aberta em',render:d=>new Date(d.entrada_at).toLocaleString('pt-BR')}
-  ]);
-  lucide.createIcons();
-}
-async function criarComanda(){
-  const nome = prompt('Nome do cliente (opcional):') || '';
-  const r = await apiPOST('/api/comandas/criar', {...userPayload(), cliente_nome:nome});
-  if(r.sucesso){ toast('Comanda '+r.numero+' criada!'); renderComandas(); }
-  else toast(r.erro||'Erro','error');
-}
-
-// ===== PEDIDOS SITE =====
-async function renderPedidosSite(){
-  const c = document.getElementById('content');
-  c.innerHTML = `<h1 class="page-title">Pedidos do Site</h1><p class="page-sub">Pedidos recebidos pelo site / delivery.</p>
-    <div class="card" id="pedTable"><div class="empty-state"><i data-lucide="loader-2"></i><p>Carregando...</p></div></div>`;
-  lucide.createIcons();
-  const r = await apiGET('/api/site/pedidos');
-  document.getElementById('pedTable').innerHTML = tabelaSimples(r.pedidos, [
-    {chave:'id',titulo:'#'}, {chave:'cliente_nome',titulo:'Cliente'},
-    {chave:'telefone',titulo:'Telefone'}, {chave:'forma_pagamento',titulo:'Pagamento'},
-    {chave:'total',titulo:'Total',render:d=>fmt(d.total)},
-    {chave:'status',titulo:'Status',render:d=>`<span class="badge ${d.status==='CONFIRMADO'?'ok':d.status==='SOLICITADO'?'warn':'info'}">${d.status||'-'}</span>`}
-  ], d=>`<select onchange="mudarStatusPedido(${d.id}, this.value)" style="padding:4px 8px;border-radius:5px;border:1px solid var(--border);font-size:12px">
-    <option ${d.status==='SOLICITADO'?'selected':''}>SOLICITADO</option>
-    <option ${d.status==='CONFIRMADO'?'selected':''}>CONFIRMADO</option>
-    <option ${d.status==='EM_ENTREGA'?'selected':''}>EM_ENTREGA</option>
-    <option ${d.status==='ENTREGUE'?'selected':''}>ENTREGUE</option>
-    <option ${d.status==='CANCELADO'?'selected':''}>CANCELADO</option></select>`);
-  lucide.createIcons();
-}
-async function mudarStatusPedido(id, status){
-  const r = await apiPOST('/api/site/pedido/status', {...userPayload(), pedido_id:id, status});
-  if(r.sucesso) toast('Status atualizado!'); else toast(r.erro||'Erro','error');
-}
-
-// ===== ESTOQUE =====
-async function renderEstoque(){
-  const c = document.getElementById('content');
-  c.innerHTML = `<h1 class="page-title">Estoque (WMS)</h1><p class="page-sub">Estoque por endereÃ§o com controle de lotes.</p>
-    <div class="card"><button class="btn btn-primary" onclick="modalMovEstoque('ENTRADA')"><i data-lucide="arrow-down-to-line"></i> Entrada</button>
-      <button class="btn btn-secondary" style="margin-left:8px" onclick="modalMovEstoque('SAIDA')"><i data-lucide="arrow-up-from-line"></i> SaÃ­da</button></div>
-    <div class="card" id="estTable"><div class="empty-state"><i data-lucide="loader-2"></i><p>Carregando...</p></div></div>`;
-  lucide.createIcons();
-  const r = await apiGET('/api/wms/estoque');
-  document.getElementById('estTable').innerHTML = tabelaSimples(r.estoque, [
-    {chave:'produto_nome',titulo:'Produto'}, {chave:'sku',titulo:'SKU'},
-    {chave:'location_code',titulo:'EndereÃ§o',render:d=>`<span class="badge info">${d.location_code||'-'}</span>`},
-    {chave:'qty',titulo:'Quantidade'}, {chave:'valor_unitario',titulo:'Vlr. Unit.',render:d=>fmt(d.valor_unitario)},
-    {chave:'valor_total',titulo:'Vlr. Total',render:d=>fmt(d.valor_total)}
-  ]);
-  lucide.createIcons();
-}
-function modalMovEstoque(tipo){
-  document.getElementById('modalContainer').innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)this.remove()">
-    <div class="modal"><h3><i data-lucide="${tipo==='ENTRADA'?'arrow-down-to-line':'arrow-up-from-line'}"></i> ${tipo==='ENTRADA'?'Entrada':'SaÃ­da'} de Estoque</h3>
-      <div class="form-grid">
-        <div class="form-group"><label>Produto</label><input id="mProd" placeholder="Nome do produto"></div>
-        <div class="form-group"><label>SKU</label><input id="mSku"></div>
-        <div class="form-group"><label>Quantidade</label><input id="mQty" type="number" step="0.1" value="1"></div>
-        <div class="form-group"><label>Valor UnitÃ¡rio</label><input id="mVu" type="number" step="0.01" value="0"></div>
-        <div class="form-group"><label>EndereÃ§o</label><input id="mLoc" value="A-01-01-01"></div>
-        <div class="form-group"><label>Documento</label><input id="mDoc" placeholder="NF ou Venda"></div>
-      </div>
-      <div class="form-actions"><button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
-      <button class="btn btn-primary" onclick="salvarMovEstoque('${tipo}')"><i data-lucide="save"></i> Registrar</button></div></div></div>`;
-  lucide.createIcons();
-}
-async function salvarMovEstoque(tipo){
-  const r = await apiPOST('/api/wms/'+tipo.toLowerCase(), {...userPayload(),
-    produto_nome:document.getElementById('mProd').value, sku:document.getElementById('mSku').value,
-    qty:document.getElementById('mQty').value, valor_unitario:document.getElementById('mVu').value,
-    location_code:document.getElementById('mLoc').value, documento:document.getElementById('mDoc').value,
-    product_id: Date.now()});
-  if(r.sucesso){ toast('Movimento registrado!'); document.querySelector('.modal-overlay').remove(); renderEstoque(); }
-  else toast(r.erro||'Erro','error');
-}
-
-// ===== MOVIMENTACOES =====
-async function renderMovimentos(){
-  const c = document.getElementById('content');
-  c.innerHTML = `<h1 class="page-title">MovimentaÃ§Ãµes WMS</h1><p class="page-sub">HistÃ³rico de entradas e saÃ­das de estoque.</p>
-    <div class="card" id="movTable"><div class="empty-state"><i data-lucide="loader-2"></i><p>Carregando...</p></div></div>`;
-  lucide.createIcons();
-  const r = await apiGET('/api/wms/movimentos');
-  document.getElementById('movTable').innerHTML = tabelaSimples(r.movimentos, [
-    {chave:'id',titulo:'#'}, {chave:'tipo',titulo:'Tipo',render:d=>`<span class="badge ${d.tipo==='ENTRADA'?'ok':'danger'}">${d.tipo||'-'}</span>`},
-    {chave:'produto_nome',titulo:'Produto'}, {chave:'qty',titulo:'Qtd'},
-    {chave:'origem',titulo:'Origem'}, {chave:'documento',titulo:'Documento'},
-    {chave:'created_at',titulo:'Data',render:d=>new Date(d.created_at).toLocaleString('pt-BR')}
-  ]);
-  lucide.createIcons();
-}
-
-// ===== CONTAS FINANCEIRAS =====
-async function renderContas(){
-  const c = document.getElementById('content');
-  c.innerHTML = `<h1 class="page-title">Contas a Pagar / Receber</h1><p class="page-sub">Gerencie tÃ­tulos financeiros.</p>
-    <div class="card"><button class="btn btn-primary" onclick="modalConta()"><i data-lucide="plus"></i> Nova Conta</button></div>
-    <div class="card" id="contasTable"><div class="empty-state"><i data-lucide="loader-2"></i><p>Carregando...</p></div></div>`;
-  lucide.createIcons();
-  const r = await apiGET('/api/contas');
-  document.getElementById('contasTable').innerHTML = tabelaSimples(r.contas, [
-    {chave:'tipo',titulo:'Tipo',render:d=>`<span class="badge ${d.tipo==='RECEBER'?'ok':'danger'}">${d.tipo||'-'}</span>`},
-    {chave:'descricao',titulo:'DescriÃ§Ã£o'}, {chave:'pessoa',titulo:'Pessoa'},
-    {chave:'valor',titulo:'Valor',render:d=>fmt(d.valor)}, {chave:'vencimento',titulo:'Vencimento'},
-    {chave:'categoria',titulo:'Categoria'},
-    {chave:'status',titulo:'Status',render:d=>`<span class="badge ${d.status==='PAGO'||d.status==='RECEBIDO'?'ok':'warn'}">${d.status||'-'}</span>`}
-  ], d=>d.status==='ABERTO'?`<button class="btn btn-sm btn-primary" onclick="pagarConta(${d.id})"><i data-lucide="check"></i> Pagar/Receber</button>`:'');
-  lucide.createIcons();
-}
-function modalConta(){
-  document.getElementById('modalContainer').innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)this.remove()">
-    <div class="modal"><h3><i data-lucide="file-plus"></i> Nova Conta</h3>
-      <div class="form-grid">
-        <div class="form-group"><label>Tipo</label><select id="ctTipo"><option>PAGAR</option><option>RECEBER</option></select></div>
-        <div class="form-group"><label>DescriÃ§Ã£o</label><input id="ctDesc"></div>
-        <div class="form-group"><label>Pessoa/Empresa</label><input id="ctPessoa"></div>
-        <div class="form-group"><label>Valor</label><input id="ctValor" type="number" step="0.01"></div>
-        <div class="form-group"><label>Vencimento</label><input id="ctVenc" type="date"></div>
-        <div class="form-group"><label>Categoria</label><input id="ctCat" placeholder="Aluguel, Insumos..."></div>
-      </div>
-      <div class="form-actions"><button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
-      <button class="btn btn-primary" onclick="salvarConta()"><i data-lucide="save"></i> Salvar</button></div></div></div>`;
-  lucide.createIcons();
-}
-async function salvarConta(){
-  const r = await apiPOST('/api/contabilidade/conta/criar', {...userPayload(),
-    tipo:document.getElementById('ctTipo').value, descricao:document.getElementById('ctDesc').value,
-    pessoa:document.getElementById('ctPessoa').value, valor:document.getElementById('ctValor').value,
-    vencimento:document.getElementById('ctVenc').value, categoria:document.getElementById('ctCat').value});
-  if(r.sucesso){ toast('Conta criada!'); document.querySelector('.modal-overlay').remove(); renderContas(); }
-  else toast(r.erro||'Erro','error');
-}
-async function pagarConta(id){
-  const r = await apiPOST('/api/contabilidade/conta/pagar', {...userPayload(), conta_id:id});
-  if(r.sucesso){ toast('Baixa realizada!'); renderContas(); } else toast(r.erro||'Erro','error');
-}
-
-// ===== TESOURARIA =====
-async function renderTesouraria(){
-  const c = document.getElementById('content');
-  c.innerHTML = `<h1 class="page-title">Tesouraria</h1><p class="page-sub">Controle de caixas e saldos.</p>
-    <div class="card" id="tesBox"><div class="empty-state"><i data-lucide="loader-2"></i><p>Carregando...</p></div></div>`;
-  lucide.createIcons();
-  const r = await apiGET('/api/tesouraria/status');
-  document.getElementById('tesBox').innerHTML = `
-    <div class="kpi-grid">
-      <div class="kpi-card"><div class="kpi-icon" style="background:var(--accent-soft)"><i data-lucide="check-circle" style="color:var(--accent-dark)"></i></div><div><div class="kpi-label">Caixas Abertos</div><div class="kpi-value">${(r.caixas_abertos||[]).length}</div></div></div>
-      <div class="kpi-card"><div class="kpi-icon" style="background:#dbeafe"><i data-lucide="dollar-sign" style="color:#2563eb"></i></div><div><div class="kpi-label">Saldo Atual</div><div class="kpi-value">${fmt(r.saldo_atual)}</div></div></div>
-      <div class="kpi-card"><div class="kpi-icon" style="background:#fef3c7"><i data-lucide="shield-alert" style="color:#92400e"></i></div><div><div class="kpi-label">AutorizaÃ§Ãµes Pendentes</div><div class="kpi-value">${(r.autorizacoes_pendentes||[]).length}</div></div></div>
-    </div>
-    <h3 style="margin:16px 0 10px;font-size:15px">altos numero de Movimentos</h3>
-    ${tabelaSimples(r.movimentos, [
-      {chave:'tipo',titulo:'Tipo',render:d=>`<span class="badge ${d.tipo==='ENTRADA'||d.tipo==='VENDA'||d.tipo==='SUPRIMENTO'?'ok':'danger'}">${d.tipo||'-'}</span>`},
-      {chave:'descricao',titulo:'Descricao'}, {chave:'valor',titulo:'Valor',render:d=>fmt(d.valor)},
-      {chave:'operator_matricula',titulo:'Operador'}, {chave:'status',titulo:'Status',render:d=>`<span class="badge ${d.status==='APROVADO'?'ok':'warn'}">${d.status||'-'}</span>`},
-      {chave:'created_at',titulo:'Data',render:d=>new Date(d.created_at).toLocaleString('pt-BR')}
-    ])}`;
-  lucide.createIcons();
-}
-
-// ===== AUTORIZACOES =====
-async function renderAutorizacoes(){
-  const c = document.getElementById('content');
-  c.innerHTML = `<h1 class="page-title">AutorizaÃ§Ãµes</h1><p class="page-sub">Aprove ou rejeite solicitacoes pendentes.</p>
-    <div class="card" id="autTable"><div class="empty-state"><i data-lucide="loader-2"></i><p>Carregando...</p></div></div>`;
-  lucide.createIcons();
-  const r = await apiGET('/api/autorizacoes');
-  document.getElementById('autTable').innerHTML = tabelaSimples(r.autorizacoes, [
-    {chave:'tipo',titulo:'Tipo'}, {chave:'valor',titulo:'Valor',render:d=>fmt(d.valor)},
-    {chave:'motivo',titulo:'Motivo'}, {chave:'solicitado_por',titulo:'Solicitado por'},
-    {chave:'status',titulo:'Status',render:d=>`<span class="badge ${d.status==='APROVADO'?'ok':d.status==='REJEITADO'?'danger':'warn'}">${d.status||'-'}</span>`},
-    {chave:'created_at',titulo:'Data',render:d=>new Date(d.created_at).toLocaleString('pt-BR')}
-  ], d=>d.status==='PENDENTE'?`<button class="btn btn-sm btn-primary" onclick="decidirAut(${d.id},'APROVADO')"><i data-lucide="check"></i> Aprovar</button>
-    <button class="btn btn-sm btn-danger" style="margin-left:4px" onclick="decidirAut(${d.id},'REJEITADO')"><i data-lucide="x"></i></button>`:'');
-  lucide.createIcons();
-}
-async function decidirAut(id, dec){
-  const r = await apiPOST('/api/autorizacoes/decidir', {...userPayload(), autorizacao_id:id, decisao:dec});
-  if(r.sucesso){ toast('DecisÃ£o registrada!'); renderAutorizacoes(); } else toast(r.erro||'Erro','error');
-}
-
-// ===== RH: PONTO =====
-async function renderPonto(){
-  const c = document.getElementById('content');
-  c.innerHTML = `<h1 class="page-title">Ponto EletrÃ´nico</h1><p class="page-sub">Registre a jornada dos funcionÃ¡rios.</p>
-    <div class="card"><button class="btn btn-primary" onclick="modalPonto()"><i data-lucide="plus"></i> Registrar Ponto</button></div>
-    <div class="card" id="pontoTable"><div class="empty-state"><i data-lucide="loader-2"></i><p>Carregando...</p></div></div>`;
-  lucide.createIcons();
-  const r = await apiGET('/api/rh/ponto');
-  document.getElementById('pontoTable').innerHTML = tabelaSimples(r.ponto, [
-    {chave:'funcionario_matricula',titulo:'MatrÃ­cula'}, {chave:'data',titulo:'Data'},
-    {chave:'entrada',titulo:'Entrada'}, {chave:'saida',titulo:'SaÃ­da'},
-    {chave:'horas_trabalhadas',titulo:'Horas'}, {chave:'horas_extras',titulo:'Extras'}
-  ]);
-  lucide.createIcons();
-}
-function modalPonto(){
-  document.getElementById('modalContainer').innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)this.remove()">
-    <div class="modal"><h3><i data-lucide="clock"></i> Registrar Ponto</h3>
-      <div class="form-grid">
-        <div class="form-group"><label>MatrÃ­cula</label><input id="ptMat" value="${currentUser?.matricula||''}"></div>
-        <div class="form-group"><label>Data</label><input id="ptData" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
-        <div class="form-group"><label>Entrada</label><input id="ptEnt" type="time" value="08:00"></div>
-        <div class="form-group"><label>SaÃ­da</label><input id="ptSai" type="time" value="17:00"></div>
-        <div class="form-group"><label>Pausa (min)</label><input id="ptPausa" type="number" value="60"></div>
-        <div class="form-group"><label>Horas Trabalhadas</label><input id="ptHoras" type="number" step="0.1" value="8"></div>
-      </div>
-      <div class="form-actions"><button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
-      <button class="btn btn-primary" onclick="salvarPonto()"><i data-lucide="save"></i> Salvar</button></div></div></div>`;
-  lucide.createIcons();
-}
-async function salvarPonto(){
-  const r = await apiPOST('/api/rh/ponto/registrar', {...userPayload(),
-    funcionario_matricula:document.getElementById('ptMat').value, data:document.getElementById('ptData').value,
-    entrada:document.getElementById('ptEnt').value, saida:document.getElementById('ptSai').value,
-    pausa_min:document.getElementById('ptPausa').value, horas_trabalhadas:document.getElementById('ptHoras').value});
-  if(r.sucesso){ toast('Ponto registrado!'); document.querySelector('.modal-overlay').remove(); renderPonto(); }
-  else toast(r.erro||'Erro','error');
-}
-
-// ===== FERIAS =====
-async function renderFerias(){
-  const c = document.getElementById('content');
-  c.innerHTML = `<h1 class="page-title">FÃ©rias</h1><p class="page-sub">Controle de ferias dos funcionarios.</p>
-    <div class="card"><button class="btn btn-primary" onclick="modalFerias()"><i data-lucide="plus"></i> Registrar FÃ©rias</button></div>
-    <div class="card" id="feriasTable"><div class="empty-state"><i data-lucide="loader-2"></i><p>Carregando...</p></div></div>`;
-  lucide.createIcons();
-  const r = await apiGET('/api/rh/ferias');
-  document.getElementById('feriasTable').innerHTML = tabelaSimples(r.ferias, [
-    {chave:'funcionario_matricula',titulo:'MatrÃ­cula'}, {chave:'inicio',titulo:'Ini­cio'},
-    {chave:'fim',titulo:'Fim'}, {chave:'dias',titulo:'Dias'},
-    {chave:'status',titulo:'Status',render:d=>`<span class="badge ${d.status==='APROVADO'?'ok':'warn'}">${d.status||'-'}</span>`}
-  ]);
-  lucide.createIcons();
-}
-function modalFerias(){
-  document.getElementById('modalContainer').innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)this.remove()">
-    <div class="modal"><h3><i data-lucide="palmtree"></i> Registrar FÃ©rias</h3>
-      <div class="form-grid">
-        <div class="form-group"><label>MatrÃ­cula</label><input id="feMat"></div>
-        <div class="form-group"><label>InÃ­cio</label><input id="feIni" type="date"></div>
-        <div class="form-group"><label>Fim</label><input id="feFim" type="date"></div>
-        <div class="form-group"><label>Dias</label><input id="feDias" type="number" value="30"></div>
-      </div>
-      <div class="form-actions"><button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
-      <button class="btn btn-primary" onclick="salvarFerias()"><i data-lucide="save"></i> Salvar</button></div></div></div>`;
-  lucide.createIcons();
-}
-async function salvarFerias(){
-  const r = await apiPOST('/api/rh/ferias/registrar', {...userPayload(),
-    funcionario_matricula:document.getElementById('feMat').value, inicio:document.getElementById('feIni').value,
-    fim:document.getElementById('feFim').value, dias:document.getElementById('feDias').value});
-  if(r.sucesso){ toast('Ferias registradas!'); document.querySelector('.modal-overlay').remove(); renderFerias(); }
-  else toast(r.erro||'Erro','error');
-}
-
-// ===== HOLERITES =====
-async function renderHolerites(){
-  const c = document.getElementById('content');
-  c.innerHTML = `<h1 class="page-title">Holerites</h1><p class="page-sub">Folha de pagamento.</p>
-    <div class="card"><button class="btn btn-primary" onclick="modalHolerite()"><i data-lucide="plus"></i> Gerar Holerite</button></div>
-    <div class="card" id="holTable"><div class="empty-state"><i data-lucide="loader-2"></i><p>Carregando...</p></div></div>`;
-  lucide.createIcons();
-  const r = await apiGET('/api/rh/holerites');
-  document.getElementById('holTable').innerHTML = tabelaSimples(r.holerites, [
-    {chave:'funcionario_matricula',titulo:'MatrÃ­cula'}, {chave:'competencia',titulo:'CompetÃªncia'},
-    {chave:'salario_base',titulo:'Base',render:d=>fmt(d.salario_base)},
-    {chave:'descontos',titulo:'Descontos',render:d=>fmt(d.descontos)},
-    {chave:'liquido',titulo:'LÃ­quido',render:d=>`<strong>${fmt(d.liquido)}</strong>`},
-    {chave:'status',titulo:'Status',render:d=>`<span class="badge ${d.status==='FECHADO'?'ok':'warn'}">${d.status||'-'}</span>`}
-  ]);
-  lucide.createIcons();
-}
-function modalHolerite(){
-  document.getElementById('modalContainer').innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)this.remove()">
-    <div class="modal"><h3><i data-lucide="file-badge"></i> Gerar Holerite</h3>
-      <div class="form-grid">
-        <div class="form-group"><label>Matricula</label><input id="hoMat"></div>
-        <div class="form-group"><label>Competencia</label><input id="hoComp" placeholder="2026-10"></div>
-        <div class="form-group"><label>Salario Base</label><input id="hoBase" type="number" step="0.01" value="1500"></div>
-        <div class="form-group"><label>Descontos</label><input id="hoDesc" type="number" step="0.01" value="0"></div>
-        <div class="form-group"><label>Liquido</label><input id="hoLiq" type="number" step="0.01" value="1500"></div>
-      </div>
-      <div class="form-actions"><button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
-      <button class="btn btn-primary" onclick="salvarHolerite()"><i data-lucide="save"></i> Salvar</button></div></div></div>`;
-  lucide.createIcons();
-}
-async function salvarHolerite(){
-  const r = await apiPOST('/api/rh/holerites/criar', {...userPayload(),
-    funcionario_matricula:document.getElementById('hoMat').value, competencia:document.getElementById('hoComp').value,
-    salario_base:document.getElementById('hoBase').value, descontos:document.getElementById('hoDesc').value,
-    liquido:document.getElementById('hoLiq').value});
-  if(r.sucesso){ toast('Holerite gerado!'); document.querySelector('.modal-overlay').remove(); renderHolerites(); }
-  else toast(r.erro||'Erro','error');
-}
-
-// ===== LOGISTICA =====
-async function renderLogistica(){
-  const c = document.getElementById('content');
-  c.innerHTML = `<h1 class="page-title">LogÃ­stica / Entregas</h1><p class="page-sub">Controle de entregas e transporte.</p>
-    <div class="card"><button class="btn btn-primary" onclick="modalLogistica()"><i data-lucide="plus"></i> Nova Entrega</button></div>
-    <div class="card" id="logTable"><div class="empty-state"><i data-lucide="loader-2"></i><p>Carregando...</p></div></div>`;
-  lucide.createIcons();
-  const r = await apiGET('/api/logistica/movimentos');
-  document.getElementById('logTable').innerHTML = tabelaSimples(r.movimentos, [
-    {chave:'tipo',titulo:'Tipo'}, {chave:'produto_nome',titulo:'Produto'},
-    {chave:'qty',titulo:'Qtd'}, {chave:'destino',titulo:'Destino'},
-    {chave:'motorista',titulo:'Motorista'}, {chave:'placa',titulo:'Placa'},
-    {chave:'status',titulo:'Status',render:d=>`<span class="badge ${d.status==='CONCLUIDO'?'ok':'warn'}">${d.status||'-'}</span>`}
-  ], d=>d.status!=='CONCLUIDO'?`<button class="btn btn-sm btn-primary" onclick="concluirLog(${d.id})"><i data-lucide="check"></i> Concluir</button>`:'');
-  lucide.createIcons();
-}
-function modalLogistica(){
-  document.getElementById('modalContainer').innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)this.remove()">
-    <div class="modal"><h3><i data-lucide="truck"></i> Nova Entrega</h3>
-      <div class="form-grid">
-        <div class="form-group"><label>Produto</label><input id="lgProd"></div>
-        <div class="form-group"><label>Quantidade</label><input id="lgQty" type="number" step="0.1" value="1"></div>
-        <div class="form-group"><label>Destino</label><input id="lgDest"></div>
-        <div class="form-group"><label>Motorista</label><input id="lgMot"></div>
-        <div class="form-group"><label>Placa</label><input id="lgPlaca"></div>
-      </div>
-      <div class="form-actions"><button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
-      <button class="btn btn-primary" onclick="salvarLogistica()"><i data-lucide="save"></i> Criar Entrega</button></div></div></div>`;
-  lucide.createIcons();
-}
-async function salvarLogistica(){
-  const r = await apiPOST('/api/logistica/criar', {...userPayload(),
-    produto_nome:document.getElementById('lgProd').value, qty:document.getElementById('lgQty').value,
-    destino:document.getElementById('lgDest').value, motorista:document.getElementById('lgMot').value,
-    placa:document.getElementById('lgPlaca').value});
-  if(r.sucesso){ toast('Entrega criada!'); document.querySelector('.modal-overlay').remove(); renderLogistica(); }
-  else toast(r.erro||'Erro','error');
-}
-async function concluirLog(id){
-  const r = await apiPOST('/api/logistica/concluir', {...userPayload(), logistica_id:id});
-  if(r.sucesso){ toast('Entrega concluida!'); renderLogistica(); } else toast(r.erro||'Erro','error');
-}
-
-// ===== GRID 1: BOT CONFIG =====
-async function renderBotConfig(){
-  const c = document.getElementById('content');
-  c.innerHTML = `<h1 class="page-title">Grid 1 â€” ConfiguraÃ§Ã£o do Bot</h1><p class="page-sub">Personalize o chatbot sem mexer no cÃ³digo.</p>
-    <div class="grid-2">
-      <div class="card"><div class="card-title"><i data-lucide="settings-2"></i> ConfiguraÃ§Ãµes Gerais</div>
-        <div class="form-grid" style="margin-top:14px" id="botConfigForm"></div>
-        <div class="form-actions"><button class="btn btn-primary" onclick="salvarBotConfig()"><i data-lucide="save"></i> Salvar ConfiguraÃ§Ãµes</button></div>
-      </div>
-      <div class="card"><div class="card-title"><i data-lucide="message-square-text"></i> Regras de Resposta</div>
-        <div id="botRegras" style="margin-top:14px"></div>
-        <button class="btn btn-primary btn-sm" style="margin-top:10px" onclick="addBotRegra()"><i data-lucide="plus"></i> Nova Regra</button>
-      </div>
-    </div>
-    <div class="card"><div class="card-title"><i data-lucide="message-circle"></i> Testar o Bot</div>
-      <div class="chat-box" style="margin-top:14px;height:300px">
-        <div class="chat-messages" id="botTestMsgs"><div class="chat-msg bot">OlÃ¡! Eu sou o bot configurado. Me pergunte algo!</div></div>
-        <div class="chat-input"><input id="botTestInput" placeholder="Digite uma mensagem..." onkeypress="if(event.key==='Enter')testarBot()">
-          <button onclick="testarBot()"><i data-lucide="send" style="width:16px;height:16px"></i></button></div>
-      </div></div>`;
-  lucide.createIcons();
-  const r = await apiGET('/api/bot/config');
-  const form = document.getElementById('botConfigForm');
-  const campos = {nome_bot:'Nome do Bot', saudacao:'Saudacao Inicial', horario_atendimento:'Horario de Atendimento', endereco:'EndereÃ§o'};
-  const cfg = {};
-  (r.config_geral||[]).forEach(g=>cfg[g.nome]=g.valor);
-  form.innerHTML = Object.entries(campos).map(([k,label])=>
-    `<div class="form-group" style="grid-column:1/-1"><label>${label}</label><input id="bot_${k}" value="${cfg[k]||''}"></div>`).join('');
-  const regrasBox = document.getElementById('botRegras');
-  window._botRegras = r.regras || [];
-  renderBotRegras();
-}
-function renderBotRegras(){
-  const rb = document.getElementById('botRegras');
-  if(!window._botRegras.length){ rb.innerHTML = '<p style="color:var(--muted);font-size:13px">Nenhuma regra cadastrada.</p>'; return; }
-  rb.innerHTML = window._botRegras.map((r,i)=>`<div style="display:flex;gap:8px;align-items:center;padding:8px;border:1px solid var(--border);border-radius:7px;margin-bottom:6px">
-    <div style="flex:1"><div style="font-size:11px;color:var(--muted)">Palavras-chave</div><div style="font-size:13px;font-weight:600">${r.nome||''}</div>
-    <div style="font-size:11px;color:var(--muted);margin-top:4px">Resposta</div><div style="font-size:12px">${r.valor||''}</div></div>
-    <button class="btn btn-sm btn-danger" onclick="delBotRegra(${i})"><i data-lucide="trash-2"></i></button></div>`).join('');
-  lucide.createIcons();
-}
-function addBotRegra(){
-  const kw = prompt('Palavras-chave (separadas por |):');
-  if(!kw) return;
-  const resp = prompt('Resposta do bot:');
-  if(!resp) return;
-  window._botRegras.push({nome:kw, valor:resp});
-  renderBotRegras();
-  apiPOST('/api/bot/regras', {...userPayload(), palavras_chave:kw, resposta:resp});
-}
-function delBotRegra(i){
-  const r = window._botRegras[i];
-  if(r.id) apiPOST('/api/bot/regras/excluir', {...userPayload(), id:r.id});
-  window._botRegras.splice(i,1); renderBotRegras();
-}
-async function salvarBotConfig(){
-  const dados = {...userPayload()};
-  ['nome_bot','saudacao','horario_atendimento','endereco'].forEach(k=>{
-    const el = document.getElementById('bot_'+k); if(el) dados[k]=el.value;
-  });
-  const r = await apiPOST('/api/bot/config', dados);
-  if(r.sucesso) toast('ConfiguraÃ§Ãµes do bot salvas!'); else toast(r.erro||'Erro','error');
-}
-async function testarBot(){
-  const input = document.getElementById('botTestInput');
-  const msg = input.value; if(!msg) return;
-  const box = document.getElementById('botTestMsgs');
-  box.innerHTML += `<div class="chat-msg user">${msg}</div>`; input.value='';
-  box.scrollTop = box.scrollHeight;
-  const r = await apiPOST('/api/bot/responder', {mensagem:msg});
-  box.innerHTML += `<div class="chat-msg bot">${r.resposta||r.erro||'...'}</div>`;
-  box.scrollTop = box.scrollHeight;
-}
-
-// ===== GRID 2: GERENTE AMBIENTE =====
-async function renderGerente(){
-  const c = document.getElementById('content');
-  c.innerHTML = `<h1 class="page-title">Grid 2 â€” Gerente do Ambiente</h1><p class="page-sub">Monitoramento dos 14 modulos e alertas automaticos.</p>
-    <div class="kpi-grid" id="gerenteKpis"></div>
-    <div class="grid-2">
-      <div class="card"><div class="card-title"><i data-lucide="bell-ring"></i> Alertas Ativos</div><div id="gerenteAlertas" style="margin-top:14px"></div></div>
-      <div class="card"><div class="card-title"><i data-lucide="bar-chart-3"></i> Relatorio de Vendas (7 dias)</div><div class="chart-container" id="gerenteChart" style="height:280px"></div></div>
-    </div>`;
-  lucide.createIcons();
-  const st = await apiGET('/api/gerente/status-modulos');
-  const kpis = document.getElementById('gerenteKpis');
-  kpis.innerHTML = (st.modulos||[]).map(m=>`<div class="kpi-card">
-    <div class="kpi-icon" style="background:${m.status==='ok'?'var(--accent-soft)':m.status==='atencao'?'#fef3c7':'var(--danger-soft)'}">
-    <i data-lucide="${m.status==='ok'?'check-circle':m.status==='atencao'?'clock':'alert-triangle'}" style="color:${m.status==='ok'?'var(--accent-dark)':m.status==='atencao'?'#92400e':'var(--danger)'}"></i></div>
-    <div><div class="kpi-label">${m.modulo}</div><div class="kpi-value" style="font-size:18px">${m.valor}</div>
-    <div class="kpi-sub">${m.status==='ok'?'Tudo OK':m.status==='atencao'?'AtenÃ§Ã£o':'Alerta!'}</div></div></div>`).join('');
-  const al = await apiGET('/api/gerente/alertas');
-  const ab = document.getElementById('gerenteAlertas');
-  ab.innerHTML = (al.alertas||[]).map(a=>`<div class="alert-item ${a.nivel}"><i data-lucide="alert-triangle"></i><span style="font-size:13px;font-weight:600">${a.mensagem}</span></div>`).join('')
-    || '<div class="empty-state"><i data-lucide="check-circle-2"></i><p>Nenhum alerta ativo.</p></div>';
-  const rv = await apiGET('/api/gerente/relatorio-vendas');
-  const dias = [...new Set((rv.vendas||[]).map(v=>new Date(v.dia).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})))];
-  const loja = dias.map(d=>{const v=(rv.vendas||[]).find(x=>new Date(x.dia).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})===d && x.origem==='loja');return v?parseFloat(v.valor):0;});
-  const site = dias.map(d=>{const v=(rv.vendas||[]).find(x=>new Date(x.dia).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})===d && x.origem==='site');return v?parseFloat(v.valor):0;});
-  const chart = echarts.init(document.getElementById('gerenteChart'));
-  chart.setOption({tooltip:{trigger:'axis'},legend:{data:['Loja','Site'],textStyle:{color:'#64748b'}},
-    grid:{left:50,right:20,top:40,bottom:30},
-    xAxis:{type:'category',data:dias,axisLabel:{color:'#64748b'}},
-    yAxis:{type:'value',axisLabel:{color:'#64748b'},splitLine:{lineStyle:{color:'#f1f5f9'}}},
-    series:[{name:'Loja',type:'bar',data:loja,itemStyle:{color:'#16a34a'}},{name:'Site',type:'bar',data:site,itemStyle:{color:'#f59e0b'}}]});
-  lucide.createIcons();
-}
-
-// ===== GRID 3: IA VENDAS =====
-async function renderIAVendas(){
-  const c = document.getElementById('content');
-  c.innerHTML = `<h1 class="page-title">Grid 3 â€” IA de Vendas</h1><p class="page-sub">Chatbot de vendas com recomendaÃ§Ãµes e pedidos automÃ¡ticos.</p>
-    <div class="kpi-grid" id="iaKpis">
-      <div class="kpi-card"><div class="kpi-icon" style="background:#f3e8ff"><i data-lucide="shopping-cart" style="color:#7c3aed"></i></div><div><div class="kpi-label">Pedidos via IA</div><div class="kpi-value" id="iaPedidos">---</div></div></div>
-      <div class="kpi-card"><div class="kpi-icon" style="background:var(--accent-soft)"><i data-lucide="dollar-sign" style="color:var(--accent-dark)"></i></div><div><div class="kpi-label">Receita IA</div><div class="kpi-value" id="iaReceita">---</div></div></div>
-      <div class="kpi-card"><div class="kpi-icon" style="background:#dbeafe"><i data-lucide="users" style="color:#2563eb"></i></div><div><div class="kpi-label">Clientes do Site</div><div class="kpi-value" id="iaClientes">---</div></div></div>
-    </div>
-    <div class="grid-2">
-      <div class="card"><div class="card-title"><i data-lucide="sparkles"></i> Chat com IA de Vendas</div>
-        <div class="chat-box" style="margin-top:14px">
-          <div class="chat-messages" id="iaMsgs"><div class="chat-msg bot">OlÃ¡! Sou a IA de Vendas da Padaria. Posso recomendar produtos, montar combos e finalizar seu pedido! O que deseja?</div></div>
-          <div class="chat-input"><input id="iaInput" placeholder="Pergunte sobre produtos, promoÃ§Ãµes..." onkeypress="if(event.key==='Enter')enviarIA()">
-          <button onclick="enviarIA()"><i data-lucide="send" style="width:16px;height:16px"></i></button></div>
-        </div>
-        <div id="iaProdutosBox" style="margin-top:14px"></div>
-      </div>
-      <div class="card"><div class="card-title"><i data-lucide="star"></i> Produtos Recomendados</div>
-        <div id="iaRecomendados" style="margin-top:14px"></div>
-      </div>
-    </div>`;
-  lucide.createIcons();
-  const m = await apiGET('/api/ia-vendas/metricas');
-  document.getElementById('iaPedidos').textContent = m.total_pedidos||0;
-  document.getElementById('iaReceita').textContent = fmt(m.receita_ia||0);
-  document.getElementById('iaClientes').textContent = m.clientes_site||0;
-  const rec = await apiGET('/api/ia-vendas/produtos-recomendados');
-  document.getElementById('iaRecomendados').innerHTML = (rec.recomendados||[]).map(p=>
-    `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px">
-      <div><strong style="font-size:13px">${p.nome}</strong><div style="font-size:11px;color:var(--muted)">${p.sku||''} â€¢ ${p.categoria||''}</div></div>
-      <div style="font-weight:700;color:var(--accent-dark)">${fmt(p.preco_venda)}</div></div>`).join('') || '<p style="color:var(--muted)">Sem produtos cadastrados</p>';
-}
-let carrinhoIA = [];
-async function enviarIA(){
-  const input = document.getElementById('iaInput');
-  const msg = input.value; if(!msg) return;
-  const box = document.getElementById('iaMsgs');
-  box.innerHTML += `<div class="chat-msg user">${msg}</div>`; input.value='';
-  box.scrollTop = box.scrollHeight;
-  const r = await apiPOST('/api/ia-vendas/chat', {mensagem:msg});
-  box.innerHTML += `<div class="chat-msg bot">${r.resposta||r.erro||'...'}</div>`;
-  if(r.produtos && r.produtos.length){
-    const pb = document.getElementById('iaProdutosBox');
-    pb.innerHTML = '<div style="font-weight:700;font-size:13px;margin-bottom:8px">Produtos sugeridos:</div>' +
-      r.produtos.map(p=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px">
-        <div><strong style="font-size:12px">${p.nome}</strong> <span style="font-size:11px;color:var(--muted)">${fmt(p.preco_venda)}</span></div>
-        <button class="btn btn-sm btn-primary" onclick='addCarrinhoIA(${JSON.stringify({id:p.id,nome:p.nome,preco:p.preco_venda,sku:p.sku})})'><i data-lucide="plus"></i> Adicionar</button></div>`).join('') +
-      (carrinhoIA.length?`<div style="margin-top:10px;padding:10px;background:var(--accent-soft);border-radius:8px">
-        <strong>Pedido: ${carrinhoIA.length} item(ns) â€” Total ${fmt(carrinhoIA.reduce((s,i)=>s+i.preco,0))}</strong>
-        <button class="btn btn-sm btn-primary" style="margin-left:8px" onclick="finalizarPedidoIA()"><i data-lucide="check"></i> Finalizar</button></div>`:'');
-    lucide.createIcons();
-  }
-  box.scrollTop = box.scrollHeight;
-}
-function addCarrinhoIA(p){
-  carrinhoIA.push({product_id:p.id, produto_nome:p.nome, sku:p.sku, qty:1, unit_price:p.preco, total:p.preco});
-  toast(p.nome+' adicionado ao pedido!');
-  enviarIA(); // re-render
-}
-async function finalizarPedidoIA(){
-  const total = carrinhoIA.reduce((s,i)=>s+i.total,0);
-  const r = await apiPOST('/api/ia-vendas/salvar-pedido', {cliente_nome:'Cliente IA', itens:carrinhoIA, subtotal:total, total});
-  if(r.sucesso){ toast('Pedido #'+r.pedido_id+' finalizado!'); carrinhoIA=[]; renderIAVendas(); }
-  else toast(r.erro||'Erro','error');
-}
-
-// ===== INIT =====
-if(currentUser) showView('dashboard');
-lucide.createIcons();
-</script>
-</body>
-</html>
+if __name__=="__main__":
+    run()
