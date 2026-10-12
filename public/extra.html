@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+><!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -158,11 +158,27 @@ async function telaInteg(){
 }
 async function saveIn(){await POST('/api/bancos/config',{tipo:it.value,provedor:ip.value,api_key:ik.value});telaInteg();}
 async function telaComparar(){
-  document.getElementById('tela').innerHTML='<h3>Comparar Loja x iFood x Site</h3><div id="cmp">...</div>';
-  const v=await GET('/api/vendas');const s=await GET('/api/site/pedidos');
-  let l=(v.vendas||[]).reduce((a,x)=>a+parseFloat(x.total||0),0);let si=0,ifo=0;
-  (s.pedidos||[]).forEach(p=>{if(p.forma_pagamento=='IFOOD')ifo+=parseFloat(p.total||0);else si+=parseFloat(p.total||0);});
-  document.getElementById('cmp').innerHTML=tabela(['Canal','Total'],[['Loja',fmt(l)],['iFood',fmt(ifo)],['Site',fmt(si)]]);
+ document.getElementById('tela').innerHTML='<h3>Comparar Loja x iFood x Site</h3><div class="noprint"><button class="btn" onclick="telaComparar()">Ver Preview</button> <button class="btn" onclick="window.print()">Imprimir</button></div><div id="cmp" class="preview">carregando...</div>';
+ const v=await GET('/api/vendas');
+ const s=await GET('/api/site/pedidos');
+ const b=await GET('/api/bancos/vinculos');
+ let loja=0;
+ try{loja=(v.vendas||[]).reduce((a,x)=>a+parseFloat(x.total||0),0);}catch(e){}
+ let si=0,ifo=0;
+ (s.pedidos||[]).forEach(p=>{
+  if((p.forma_pagamento||'')=='IFOOD')ifo+=parseFloat(p.total||0);
+  else si+=parseFloat(p.total||0);
+ });
+ let rep=0;
+ try{rep=(b.ifood||[]).reduce((a,x)=>a+parseFloat(x.bruto||0),0);}catch(e){}
+ let h=tabela(['Canal','Total','Ação'],[
+  ['Loja PDV',fmt(loja),'<button class="btn" onclick="location.href=\'/admin\'">Abrir Loja</button>'],
+  ['iFood Pedidos',fmt(ifo),'<button class="btn" onclick="aba(\'bancos\')">Administrar iFood</button>'],
+  ['Site',fmt(si),'<button class="btn" onclick="window.open(\'/\',\'_blank\')">Ver Site</button>'],
+  ['Repasses iFood',fmt(rep),'']
+ ]);
+ document.getElementById('cmp').innerHTML=h;
+ document.getElementById('printCont').innerHTML='<h2>Comparar</h2>'+h;
 }
 async function telaAudit(){
   document.getElementById('tela').innerHTML='<h3>Auditoria - escolhe o que auditar</h3>'
