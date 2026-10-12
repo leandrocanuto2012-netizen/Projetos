@@ -193,15 +193,30 @@ async function verAudit(){
   document.getElementById('printCont').innerHTML='<h2>Auditoria</h2>'+h;
 }
 function auditDec(mod,id,st){window._aprov[mod+id]=st;verAudit();}
+
 async function telaFat(){
-  document.getElementById('tela').innerHTML='<h3>Faturamento</h3><div class="noprint"><button class="btn" onclick="verFatPrev()">Ver Preview</button></div><div id="ff" class="preview">...</div>';
-  verFatPrev();
+ document.getElementById('tela').innerHTML='<h3>Faturamento - agrupa pendência e fatura</h3><div class="noprint"><button class="btn" onclick="verFatPrev()">Ver Preview</button> <button class="btn" onclick="window.print()">Imprimir</button></div><div id="ff" class="preview">...</div><div id="fmsg"></div>';
+ verFatPrev();
 }
 async function verFatPrev(){
-  const c=await GET('/api/contas');
-  let g={};
-  (c.contas||[]).forEach(x=>{if(x.status!='ABERTO')return;let k=x.pessoa+'|'+x.tipo;if(!g[k])g[k]={pessoa:x.pessoa,tipo:x.tipo,total:0};g[k].total+=parseFloat(x.valor||0);});
-  document.getElementById('ff').innerHTML=tabela(['Cliente','Tipo','Total'],Object.values(g).map(x=>[x.pessoa,x.tipo,fmt(x.total)]));
+ const c=await GET('/api/contas');
+ const f=await GET('/api/faturamento_resumo');
+ let g={};
+ (c.contas||[]).forEach(x=>{
+  if(x.status!='ABERTO')return;
+  let k=x.pessoa+'|'+x.tipo;
+  if(!g[k])g[k]={pessoa:x.pessoa,tipo:x.tipo,total:0};
+  g[k].total+=parseFloat(x.valor||0);
+ });
+ let h='Comp Total '+fmt(f.total||0)+'<br>'+tabela(['Cliente','Tipo','Total',''],Object.values(g).map(x=>[x.pessoa,x.tipo,fmt(x.total),x.tipo=='RECEBER'?'<button class="btn" onclick="faturarGrupo(\''+String(x.pessoa).replace(/\'/g,'')+'\','+x.total+')">Faturar + Boleto</button>':'a pagar']));
+ document.getElementById('ff').innerHTML=h;
+ document.getElementById('printCont').innerHTML='<h2>Faturamento</h2>'+h;
+}
+async function faturarGrupo(p,t){
+ const r=await POST('/api/boletos/gerar',{pessoa:p,valor:t,vencimento:new Date().toISOString().slice(0,10),descricao:'Fatura '+p});
+ document.getElementById('fmsg').innerHTML='Gerado '+r.link+' - já foi pra Contas a Receber';
+ verFatPrev();
+}
 }
 async function telaCont(){
   document.getElementById('tela').innerHTML='<h3>Contratos</h3><div class="noprint"><label><input type="checkbox" id="t1" checked> Servicos</label><label><input type="checkbox" id="t2"> Producao</label><label><input type="checkbox" id="t3"> Compra</label><label><input type="checkbox" id="t4"> Armazenagem</label><label><input type="checkbox" id="t5"> Locacao</label><br>Cliente<input id="cc">Valor<input id="cv" type="number">Prazo<input id="cp" type="date">Detalhe<input id="co"> <button class="btn" onclick="saveC()">Ver Preview</button> <button class="btn" onclick="window.print()">Imprimir</button></div><div id="pct" class="preview">Preview...</div><div id="lc"></div>';
