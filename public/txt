@@ -1,16 +1,11 @@
-GestÃ£o -> Gestão
-MatrÃ­cula -> Matrícula
-PadrÃ£o -> Padrão
-InÃ­cio -> Início
-PÃºblico -> Público
-VisÃ£o -> Visão
-MovimentaÃ§Ãµes -> Movimentações
-FuncionÃ¡rios -> Funcionários
-AutorizaÃ§Ãµes -> Autorizações
-FÃ©rias -> Férias
-LogÃ­stica -> Logística
-InteligÃªncia -> Inteligência
-ConfiguraÃ§Ã£o -> Configuração
-cÃ³digo -> código
-AÃ§Ãµes -> Ações
-PreÃ§o -> Preço
+if path in ("/api/ia-vendas/produtos", "/api/ia-vendas/produtos-recomendados"):
+    try:
+        cur.execute("SELECT * FROM produtos WHERE status='ATIVO' ORDER BY id DESC LIMIT 100")
+        lst = [dict(r) for r in cur.fetchall() or []]
+        return self.responder({"produtos": lst, "recomendados": lst[:6]})
+    except:
+        return self.responder({"produtos": [], "recomendados": []})
+if path == "/api/site/config":
+    return self.responder({"configuracoes": []})
+if path == "/api/bot/config":
+    return self.responder({"config_geral": [], "regras": []})
