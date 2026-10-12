@@ -2,6 +2,7 @@ import os
 import json
 import hashlib
 import random
+import uuid
 import psycopg2
 import psycopg2.extras
 from datetime import datetime
@@ -72,6 +73,9 @@ def garantir_schema():
     print("Schema pronto",flush=True)
 
 class APIHandler(BaseHTTPRequestHandler):
+    def handle(self):
+        try: super().handle()
+        except (BrokenPipeError,ConnectionResetError,OSError): pass
     def set_headers(self,s=200):
         self.send_response(s)
         self.send_header("Content-Type","application/json; charset=utf-8")
@@ -122,6 +126,9 @@ class APIHandler(BaseHTTPRequestHandler):
             return self.responder({"erro":"novas.js nao achado"},404)
         if path in ("/extra","/extra.html"):
             if self.serve_static("extra.html","text/html; charset=utf-8"): return
+        if path.startswith("/uploads/"):
+            if self.serve_static(path.lstrip("/"),"application/octet-stream"): return
+            return self.responder({"erro":"arquivo nao achado"},404)
         try:
             with DBConnection() as (conn,cur):
                 def sel(sql):
@@ -136,10 +143,10 @@ class APIHandler(BaseHTTPRequestHandler):
                     return self.responder({"produtos":lst,"recomendados":lst[:6]})
                 if path=="/api/site/config": return self.responder({"configuracoes":sel("SELECT * FROM site_config_grid ORDER BY id")})
                 if path=="/api/site/pedidos": return self.responder({"pedidos":sel("SELECT * FROM site_pedidos ORDER BY id DESC LIMIT 200")})
-                if path=="/api/bot/config": return self.responder({"config_geral":[],"regras":[]})
+                if path=="/api/bot/config": return self.responder({"config_geral":sel("SELECT * FROM site_config_grid WHERE secao='bot_geral'"),"regras":sel("SELECT * FROM site_config_grid WHERE secao='bot_regras'")})
                 if path=="/api/gerente/alertas": return self.responder({"alertas":[]})
                 if path=="/api/clientes": return self.responder({"clientes":sel("SELECT * FROM clientes ORDER BY id DESC LIMIT 200")})
-                if path=="/api/funcionarios": return self.responder({"funcionarios":sel("SELECT id,matricula,nome,cargo,role,status FROM funcionarios ORDER BY id DESC")})
+                if path=="/api/funcionarios": return self.responder({"funcionarios":sel("SELECT id,matricula,nome,cargo,role,status,salario FROM funcionarios ORDER BY id DESC")})
                 if path=="/api/vendas": return self.responder({"vendas":sel("SELECT * FROM vendas ORDER BY id DESC LIMIT 200")})
                 if path=="/api/contas": return self.responder({"contas":sel("SELECT * FROM contas_financeiras ORDER BY id DESC LIMIT 300")})
                 if path=="/api/bancos/config": return self.responder({"configs":sel("SELECT * FROM integracoes_config ORDER BY tipo"),"contas":sel("SELECT * FROM contas_bancarias ORDER BY id DESC")})
@@ -167,7 +174,41 @@ class APIHandler(BaseHTTPRequestHandler):
                 return self.responder({"erro":"Rota nao encontrada "+path},404)
         except Exception as e: return self.responder({"erro":str(e)},500)
     def do_POST(self):
-        path=urlparse(self.path).path; d=self.get_body()
+        path=urlparse(self.path).path
+        if path=="/api/arquivos/upload":
+            try:
+                ctype=self.headers.get("Content-Type","")
+                if "boundary=" not in ctype: return self.responder({"erro":"sem boundary"},400)
+                boundary=ctype.split("boundary=")[1].strip().strip('"').encode()
+                length=int(self.headers.get("Content-Length",0))
+                raw=self.rfile.read(length)
+                parts=raw.split(b"--"+boundary)
+                filedata=None; filename="arq"; categoria="GERAL"; referencia=""
+                for part in parts:
+                    if b"Content-Disposition" not in part: continue
+                    head, _, body = part.partition(b"\r\n\r\n")
+                    body=body.rsplit(b"\r\n",1)[0]
+                    h=head.decode(errors="ignore")
+                    if 'name="file"' in h:
+                        for line in h.split(";"):
+                            if "filename=" in line:
+                                filename=line.split("filename=")[1].strip().strip('"').strip("'")
+                        filedata=body
+                    elif 'name="categoria"' in h: categoria=body.decode(errors="ignore").strip()
+                    elif 'name="referencia"' in h: referencia=body.decode(errors="ignore").strip()
+                if not filedata: return self.responder({"erro":"sem arquivo"},400)
+                ext=os.path.splitext(filename)[1][:10]
+                fname=f"{uuid.uuid4().hex}{ext}"
+                base=os.path.dirname(os.path.abspath(__file__))
+                updir=os.path.join(base,"public","uploads")
+                os.makedirs(updir,exist_ok=True)
+                with open(os.path.join(updir,fname),"wb") as out: out.write(filedata)
+                url=f"/uploads/{fname}"
+                with DBConnection() as (conn2,cur2):
+                    cur2.execute("INSERT INTO arquivos (categoria,referencia,nome,url) VALUES (%s,%s,%s,%s)",(categoria,referencia,filename,url))
+                return self.responder({"sucesso":True,"url":url})
+            except Exception as e: return self.responder({"erro":str(e)},500)
+        d=self.get_body()
         try:
             with DBConnection() as (conn,cur):
                 if path=="/api/login":
@@ -230,6 +271,10 @@ class APIHandler(BaseHTTPRequestHandler):
                 if path=="/api/rh/atestados/criar":
                     cur.execute("INSERT INTO atestados (funcionario_matricula,data,dias,motivo) VALUES (%s,%s,%s,%s)",(d.get("funcionario_matricula"),d.get("data"),numero_float(d.get("dias"),1),d.get("motivo")))
                     return self.responder({"sucesso":True})
+                if path=="/api/bot/config":
+                    return self.responder({"sucesso":True})
+                if path in ("/api/bot/responder","/api/ia-vendas/chat"):
+                    return self.responder({"resposta":"Ola! Sou o bot da padaria. Em breve com WhatsApp."})
                 if path=="/api/produtos/salvar":
                     cur.execute("INSERT INTO produtos (nome,preco_venda,status) VALUES (%s,%s,'ATIVO')",(d.get("nome"),numero_float(d.get("preco_venda"))))
                     return self.responder({"sucesso":True})
