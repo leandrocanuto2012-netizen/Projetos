@@ -1,1 +1,8 @@
-<div class="top-icon" onclick="window.open('/extra','_blank')" title="Extra"><i data-lucide="folder-open"></i></div>
+<div class="menu-group"><div class="menu-group-header" onclick="toggleGroup(this)">Extra</div><div class="menu-items">
+<div class="menu-item" onclick="window.open('/extra#bancos','_blank')">Vincular Bancos</div>
+<div class="menu-item" onclick="window.open('/extra#integ','_blank')">Integrações / Status</div>
+<div class="menu-item" onclick="window.open('/extra#comparar','_blank')">Comparar Loja x iFood x Site</div>
+<div class="menu-item" onclick="window.open('/extra#nf','_blank')">NF Entrada / Saída</div>
+<div class="menu-item" onclick="window.open('/extra#dre','_blank')">DRE</div>
+<div class="menu-item" onclick="window.open('/extra#arq','_blank')">Arquivos</div>
+</div></div>
