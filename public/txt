@@ -1,1 +1,1 @@
-<div class="menu-item" onclick="window.open('/extra','_blank')">Vincular Bancos / NF / DRE</div>
+<div class="top-icon" onclick="window.open('/extra','_blank')" title="Extra"><i data-lucide="folder-open"></i></div>
