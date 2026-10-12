@@ -1,4 +1,4 @@
-><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -29,32 +29,32 @@ table.data td{padding:8px;border-bottom:1px solid var(--border)}
 </head>
 <body>
 <div class="topbar">
-  <button onclick="location.href='/admin'">← Dashboard</button><div>Extra</div>
-  <div style="margin-left:auto">
-    <a href="https://outlook.live.com/mail/" target="_blank" style="background:#0078d4;color:#fff;padding:6px 8px;border-radius:6px;text-decoration:none">Outlook</a>
-    <a href="https://www.office.com/launch/word" target="_blank" style="background:#2b579a;color:#fff;padding:6px 8px;border-radius:6px;text-decoration:none">Word</a>
-    <a href="https://www.office.com/launch/excel" target="_blank" style="background:#217346;color:#fff;padding:6px 8px;border-radius:6px;text-decoration:none">Excel</a>
-  </div>
+<button onclick="location.href='/admin'">← Dashboard</button><div>Extra</div>
+<div style="margin-left:auto">
+<a href="https://outlook.live.com/mail/" target="_blank" style="background:#0078d4;color:#fff;padding:6px 8px;border-radius:6px;text-decoration:none">Outlook</a>
+<a href="https://www.office.com/launch/word" target="_blank" style="background:#2b579a;color:#fff;padding:6px 8px;border-radius:6px;text-decoration:none">Word</a>
+<a href="https://www.office.com/launch/excel" target="_blank" style="background:#217346;color:#fff;padding:6px 8px;border-radius:6px;text-decoration:none">Excel</a>
+</div>
 </div>
 <div class="wrap">
-  <div class="tabs">
-    <button onclick="aba('bancos')">Bancos</button>
-    <button onclick="aba('nf')">NF</button>
-    <button onclick="aba('dre')">DRE</button>
-    <button onclick="aba('agenda')">Agenda</button>
-    <button onclick="aba('arq')">Arquivos</button>
-    <button onclick="aba('ponto')">Ponto</button>
-    <button onclick="aba('bot')">Bot Celular</button>
-    <button onclick="aba('integ')">Integrações</button>
-    <button onclick="aba('comparar')">Comparar</button>
-    <button onclick="aba('audit')">Auditoria</button>
-    <button onclick="aba('fat')">Faturamento</button>
-    <button onclick="aba('cont')">Contratos</button>
-    <button onclick="aba('rel')">Relatórios</button>
-    <button onclick="aba('prod')">Produção</button>
-  </div>
-  <div id="tela" class="card">...</div>
-  <div id="printCont"></div>
+<div class="tabs">
+<button onclick="aba('bancos')">Bancos</button>
+<button onclick="aba('nf')">NF</button>
+<button onclick="aba('dre')">DRE</button>
+<button onclick="aba('agenda')">Agenda</button>
+<button onclick="aba('arq')">Arquivos</button>
+<button onclick="aba('ponto')">Ponto</button>
+<button onclick="aba('bot')">Bot Celular</button>
+<button onclick="aba('integ')">Integrações</button>
+<button onclick="aba('comparar')">Comparar</button>
+<button onclick="aba('audit')">Auditoria</button>
+<button onclick="aba('fat')">Faturamento</button>
+<button onclick="aba('cont')">Contratos</button>
+<button onclick="aba('rel')">Relatórios</button>
+<button onclick="aba('prod')">Produção</button>
+</div>
+<div id="tela" class="card">...</div>
+<div id="printCont"></div>
 </div>
 <script>
 const B = location.origin;
@@ -114,7 +114,7 @@ async function telaNF(){
   const r=await GET('/api/nf_lista');
   document.getElementById('ln').innerHTML=tabela(['Tipo','Num','Total'],(r.notas||[]).map(x=>[x.tipo,x.numero,fmt(x.total)]));
 }
-async function saveNF(){await POST('/api/nf/criar',{tipo:nt.value,numero:nn.value,pessoa:np.value,total:nv.value,aliq_icms:18,aliq_pis:1.65,aliq_cofins:7.6,aliq_iss:5});telaNF();}
+async function saveNF(){await POST('/api/nf/criar',{tipo:document.getElementById('nt').value,numero:document.getElementById('nn').value,pessoa:document.getElementById('np').value,total:document.getElementById('nv').value,aliq_icms:18,aliq_pis:1.65,aliq_cofins:7.6,aliq_iss:5});telaNF();}
 async function telaDRE(){
   document.getElementById('tela').innerHTML='<h3>DRE Gerencial</h3><div class="noprint"><button class="btn" onclick="verDRE()">Ver Preview</button> <button class="btn" onclick="window.print()">Imprimir</button></div><div id="dre" class="preview">...</div>';
   verDRE();
@@ -129,7 +129,7 @@ async function telaAgenda(){
   const r=await GET('/api/agenda_lista');
   document.getElementById('la').innerHTML=tabela(['Titulo','Inicio'],(r.eventos||[]).map(x=>[x.titulo,x.inicio]));
 }
-async function saveEv(){await POST('/api/agenda/criar',{titulo:et.value,inicio:ei.value,fim:ef.value});telaAgenda();}
+async function saveEv(){await POST('/api/agenda/criar',{titulo:document.getElementById('et').value,inicio:document.getElementById('ei').value,fim:document.getElementById('ef').value});telaAgenda();}
 async function telaArq(){
   document.getElementById('tela').innerHTML='<h3>Arquivos - upload</h3><input id="af" type="file"><button class="btn" onclick="saveAr()">Fazer Upload</button><div id="l"></div>';
   const r=await GET('/api/arquivos_lista');
@@ -156,29 +156,15 @@ async function telaInteg(){
   const r=await GET('/api/bancos/config');
   document.getElementById('c').innerHTML=tabela(['Tipo','Prov','Ativo'],(r.configs||[]).map(x=>[x.tipo,x.provedor,x.ativo?'SIM':'NAO']));
 }
-async function saveIn(){await POST('/api/bancos/config',{tipo:it.value,provedor:ip.value,api_key:ik.value});telaInteg();}
+async function saveIn(){await POST('/api/bancos/config',{tipo:document.getElementById('it').value,provedor:document.getElementById('ip').value,api_key:document.getElementById('ik').value});telaInteg();}
 async function telaComparar(){
- document.getElementById('tela').innerHTML='<h3>Comparar Loja x iFood x Site</h3><div class="noprint"><button class="btn" onclick="telaComparar()">Ver Preview</button> <button class="btn" onclick="window.print()">Imprimir</button></div><div id="cmp" class="preview">carregando...</div>';
- const v=await GET('/api/vendas');
- const s=await GET('/api/site/pedidos');
- const b=await GET('/api/bancos/vinculos');
- let loja=0;
- try{loja=(v.vendas||[]).reduce((a,x)=>a+parseFloat(x.total||0),0);}catch(e){}
- let si=0,ifo=0;
- (s.pedidos||[]).forEach(p=>{
-  if((p.forma_pagamento||'')=='IFOOD')ifo+=parseFloat(p.total||0);
-  else si+=parseFloat(p.total||0);
- });
- let rep=0;
- try{rep=(b.ifood||[]).reduce((a,x)=>a+parseFloat(x.bruto||0),0);}catch(e){}
- let h=tabela(['Canal','Total','Ação'],[
-  ['Loja PDV',fmt(loja),'<button class="btn" onclick="location.href=\'/admin\'">Abrir Loja</button>'],
-  ['iFood Pedidos',fmt(ifo),'<button class="btn" onclick="aba(\'bancos\')">Administrar iFood</button>'],
-  ['Site',fmt(si),'<button class="btn" onclick="window.open(\'/\',\'_blank\')">Ver Site</button>'],
-  ['Repasses iFood',fmt(rep),'']
- ]);
- document.getElementById('cmp').innerHTML=h;
- document.getElementById('printCont').innerHTML='<h2>Comparar</h2>'+h;
+  document.getElementById('tela').innerHTML='<h3>Comparar Loja x iFood x Site</h3><div class="noprint"><button class="btn" onclick="telaComparar()">Ver Preview</button> <button class="btn" onclick="window.print()">Imprimir</button></div><div id="cmp" class="preview">carregando...</div>';
+  const v=await GET('/api/vendas');const s=await GET('/api/site/pedidos');const b=await GET('/api/bancos/vinculos');
+  let loja=0;try{loja=(v.vendas||[]).reduce((a,x)=>a+parseFloat(x.total||0),0);}catch(e){}
+  let si=0,ifo=0;(s.pedidos||[]).forEach(p=>{if((p.forma_pagamento||'')=='IFOOD')ifo+=parseFloat(p.total||0);else si+=parseFloat(p.total||0);});
+  let rep=0;try{rep=(b.ifood||[]).reduce((a,x)=>a+parseFloat(x.bruto||0),0);}catch(e){}
+  let h=tabela(['Canal','Total','Ação'],[['Loja PDV',fmt(loja),'<button class="btn" onclick="location.href=\'/admin\'">Abrir Loja</button>'],['iFood Pedidos',fmt(ifo),'<button class="btn" onclick="aba(\'bancos\')">Administrar</button>'],['Site',fmt(si),'<button class="btn" onclick="window.open(\'/\',\'_blank\')">Ver Site</button>'],['Repasses iFood',fmt(rep),'']]);
+  document.getElementById('cmp').innerHTML=h;document.getElementById('printCont').innerHTML='<h2>Comparar</h2>'+h;
 }
 async function telaAudit(){
   document.getElementById('tela').innerHTML='<h3>Auditoria - escolhe o que auditar</h3>'
@@ -209,30 +195,27 @@ async function verAudit(){
   document.getElementById('printCont').innerHTML='<h2>Auditoria</h2>'+h;
 }
 function auditDec(mod,id,st){window._aprov[mod+id]=st;verAudit();}
-
 async function telaFat(){
- document.getElementById('tela').innerHTML='<h3>Faturamento - agrupa pendência e fatura</h3><div class="noprint"><button class="btn" onclick="verFatPrev()">Ver Preview</button> <button class="btn" onclick="window.print()">Imprimir</button></div><div id="ff" class="preview">...</div><div id="fmsg"></div>';
- verFatPrev();
+  document.getElementById('tela').innerHTML='<h3>Faturamento - agrupa pendência e fatura</h3><div class="noprint"><button class="btn" onclick="verFatPrev()">Ver Preview</button> <button class="btn" onclick="window.print()">Imprimir</button></div><div id="ff" class="preview">...</div><div id="fmsg"></div>';
+  verFatPrev();
 }
 async function verFatPrev(){
- const c=await GET('/api/contas');
- const f=await GET('/api/faturamento_resumo');
- let g={};
- (c.contas||[]).forEach(x=>{
-  if(x.status!='ABERTO')return;
-  let k=x.pessoa+'|'+x.tipo;
-  if(!g[k])g[k]={pessoa:x.pessoa,tipo:x.tipo,total:0};
-  g[k].total+=parseFloat(x.valor||0);
- });
- let h='Comp Total '+fmt(f.total||0)+'<br>'+tabela(['Cliente','Tipo','Total',''],Object.values(g).map(x=>[x.pessoa,x.tipo,fmt(x.total),x.tipo=='RECEBER'?'<button class="btn" onclick="faturarGrupo(\''+String(x.pessoa).replace(/\'/g,'')+'\','+x.total+')">Faturar + Boleto</button>':'a pagar']));
- document.getElementById('ff').innerHTML=h;
- document.getElementById('printCont').innerHTML='<h2>Faturamento</h2>'+h;
+  const c=await GET('/api/contas');const f=await GET('/api/faturamento_resumo');
+  let g={};
+  (c.contas||[]).forEach(x=>{
+    if(x.status!='ABERTO')return;
+    let k=x.pessoa+'|'+x.tipo;
+    if(!g[k])g[k]={pessoa:x.pessoa,tipo:x.tipo,total:0};
+    g[k].total+=parseFloat(x.valor||0);
+  });
+  let h='Comp Total '+fmt(f.total||0)+'<br>'+tabela(['Cliente','Tipo','Total',''],Object.values(g).map(x=>[x.pessoa,x.tipo,fmt(x.total),x.tipo=='RECEBER'?'<button class="btn" onclick="faturarGrupo(\''+String(x.pessoa).replace(/\'/g,'')+'\','+x.total+')">Faturar + Boleto</button>':'a pagar']));
+  document.getElementById('ff').innerHTML=h;
+  document.getElementById('printCont').innerHTML='<h2>Faturamento</h2>'+h;
 }
 async function faturarGrupo(p,t){
- const r=await POST('/api/boletos/gerar',{pessoa:p,valor:t,vencimento:new Date().toISOString().slice(0,10),descricao:'Fatura '+p});
- document.getElementById('fmsg').innerHTML='Gerado '+r.link+' - já foi pra Contas a Receber';
- verFatPrev();
-}
+  const r=await POST('/api/boletos/gerar',{pessoa:p,valor:t,vencimento:new Date().toISOString().slice(0,10),descricao:'Fatura '+p});
+  document.getElementById('fmsg').innerHTML='Gerado '+r.link+' - já foi pra Contas a Receber';
+  verFatPrev();
 }
 async function telaCont(){
   document.getElementById('tela').innerHTML='<h3>Contratos</h3><div class="noprint"><label><input type="checkbox" id="t1" checked> Servicos</label><label><input type="checkbox" id="t2"> Producao</label><label><input type="checkbox" id="t3"> Compra</label><label><input type="checkbox" id="t4"> Armazenagem</label><label><input type="checkbox" id="t5"> Locacao</label><br>Cliente<input id="cc">Valor<input id="cv" type="number">Prazo<input id="cp" type="date">Detalhe<input id="co"> <button class="btn" onclick="saveC()">Ver Preview</button> <button class="btn" onclick="window.print()">Imprimir</button></div><div id="pct" class="preview">Preview...</div><div id="lc"></div>';
@@ -246,7 +229,7 @@ async function saveC(){
   if(document.getElementById('t3').checked)t.push('COMPRA_VENDA');
   if(document.getElementById('t4').checked)t.push('ARMAZENAGEM');
   if(document.getElementById('t5').checked)t.push('LOCACAO_ESPACO');
-  const r=await POST('/api/contratos/criar',{cliente:cc.value,valor:cv.value,prazo:cp.value,objeto:co.value,tipos:t});
+  const r=await POST('/api/contratos/criar',{cliente:document.getElementById('cc').value,valor:document.getElementById('cv').value,prazo:document.getElementById('cp').value,objeto:document.getElementById('co').value,tipos:t});
   document.getElementById('pct').innerHTML=r.texto||JSON.stringify(r);
   document.getElementById('printCont').innerHTML='<h2>CONTRATO</h2><p>'+(r.texto||'').replace(/\n/g,'<br>')+'</p>';
 }
@@ -276,7 +259,7 @@ async function verProd(){
   });
   h+='</table>';document.getElementById('pplist').innerHTML=h;
 }
-async function iniciaProd(){await POST('/api/producao/iniciar',{produto_nome:ppnome.value,qtd_meta:ppqtd.value,responsavel_nome:ppresp.value,responsavel_matricula:ppmat.value,previsao_fim:ppfim.value,custo_insumos:ppcusto.value,preco_un:pppreco.value});telaProd();}
+async function iniciaProd(){await POST('/api/producao/iniciar',{produto_nome:document.getElementById('ppnome').value,qtd_meta:document.getElementById('ppqtd').value,responsavel_nome:document.getElementById('ppresp').value,responsavel_matricula:document.getElementById('ppmat').value,previsao_fim:document.getElementById('ppfim').value,custo_insumos:document.getElementById('ppcusto').value,preco_un:document.getElementById('pppreco').value});telaProd();}
 async function atualizaProd(id){let q=prompt('Qtd pronta?');await POST('/api/producao/atualizar',{id:id,qtd_pronta:q});verProd();}
 async function concluiProd(id){if(!confirm('Concluir?'))return;await POST('/api/producao/concluir',{id:id});verProd();}
 let h=location.hash.replace('#','');if(h)aba(h);else telaBancos();
