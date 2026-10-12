@@ -151,7 +151,19 @@ class APIHandler(BaseHTTPRequestHandler):
                     return self.responder({"eventos":evs})
                 if path=="/api/rh/ponto_calc":
                     return self.responder({"ponto":sel("SELECT * FROM ponto_registros ORDER BY data DESC LIMIT 500"),"ajustes":sel("SELECT * FROM ponto_ajustes ORDER BY id DESC LIMIT 200"),"atestados":sel("SELECT * FROM atestados ORDER BY data DESC LIMIT 200"),"funcionarios":sel("SELECT matricula,nome,salario FROM funcionarios ORDER BY nome")})
-                if path=="/api/produtos": return self.responder({"produtos":sel("SELECT * FROM produtos ORDER BY id DESC LIMIT 200")})
+                if path=="/api/produtos":
+                    if path in ("/api/ia-vendas/produtos", "/api/ia-vendas/produtos-recomendados"):
+                            try:
+                                cur.execute("SELECT * FROM produtos WHERE status='ATIVO' ORDER BY id DESC LIMIT 100")
+                                lst = [dict(r) for r in cur.fetchall() or []]
+                                return self.responder({"produtos": lst, "recomendados": lst[:6]})
+                            except:
+                                return self.responder({"produtos": [], "recomendados": []})
+                    if path == "/api/site/config":
+                    return self.responder({"configuracoes": []})
+                    if path == "/api/bot/config":
+                    return self.responder({"config_geral": [], "regras": []})
+                    return self.responder({"produtos":sel("SELECT * FROM produtos ORDER BY id DESC LIMIT 200")})
                 if path=="/api/clientes": return self.responder({"clientes":sel("SELECT * FROM clientes ORDER BY id DESC LIMIT 200")})
                 if path=="/api/funcionarios": return self.responder({"funcionarios":sel("SELECT id,matricula,nome,cargo,role,status FROM funcionarios ORDER BY id DESC LIMIT 200")})
                 if path=="/api/vendas": return self.responder({"vendas":sel("SELECT * FROM vendas ORDER BY id DESC LIMIT 200")})
@@ -235,13 +247,13 @@ class APIHandler(BaseHTTPRequestHandler):
                     return self.responder({"sucesso":True})
                 return self.responder({"erro":"Rota nao encontrada "+path},404)
         except Exception as e: return self.responder({"erro":str(e)},500)
-
-def run():
+    
+    def run():
     garantir_schema()
     port=int(os.environ.get("PORT",8080))
     server=HTTPServer(("0.0.0.0",port),APIHandler)
     print(f"Servidor rodando porta {port}",flush=True)
     server.serve_forever()
-
-if __name__=="__main__":
+    
+    if __name__=="__main__":
     run()
