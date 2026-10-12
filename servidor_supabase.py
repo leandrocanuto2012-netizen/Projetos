@@ -247,7 +247,7 @@ class APIHandler(BaseHTTPRequestHandler):
                     return self.responder({"sucesso":True})
                 return self.responder({"erro":"Rota nao encontrada "+path},404)
         except Exception as e: return self.responder({"erro":str(e)},500)
-        def run():
+    def run():
         garantir_schema()
             port=int(os.environ.get("PORT",8080))
             server=HTTPServer(("0.0.0.0",port),APIHandler)
