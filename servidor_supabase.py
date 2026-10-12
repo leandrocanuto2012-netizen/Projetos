@@ -289,6 +289,16 @@ class APIHandler(BaseHTTPRequestHandler):
                     return self.responder({"sucesso":True})
                 if path in ("/api/bot/responder","/api/ia-vendas/chat"):
                     return self.responder({"resposta":"Ola! Sou o bot da padaria. Em breve com WhatsApp."})
+                                if path=="/api/contratos/criar":
+                    cur.execute("INSERT INTO contratos (cliente,cpf_cnpj,objeto,valor,prazo,status) VALUES (%s,%s,%s,%s,%s,'RASCUNHO') RETURNING id",(d.get("cliente"),d.get("cpf_cnpj"),d.get("objeto"),numero_float(d.get("valor")),d.get("prazo"))); nid=cur.fetchone()["id"]
+                    return self.responder({"sucesso":True,"id":nid})
+                if path=="/api/contratos/assinar":
+                    import hashlib as _h
+                    cid=d.get("id"); gov=d.get("gov_cpf",""); cert=d.get("cert_nome","")
+                    base=f"{cid}-{gov}-{cert}-{datetime.now().isoformat()}"
+                    hx=_h.sha256(base.encode()).hexdigest()
+                    cur.execute("UPDATE contratos SET status='ASSINADO', hash_assinatura=%s, gov_cpf=%s WHERE id=%s",(hx,gov,cid))
+                    return self.responder({"sucesso":True,"hash":hx,"validar":"https://validar.iti.gov.br"})
                 if path=="/api/produtos/salvar":
                     cur.execute("INSERT INTO produtos (nome,preco_venda,status) VALUES (%s,%s,'ATIVO')",(d.get("nome"),numero_float(d.get("preco_venda"))))
                     return self.responder({"sucesso":True})
