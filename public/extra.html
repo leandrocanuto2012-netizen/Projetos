@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Extra - Panificadora ERP</title>
 <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#f1f5f9;--card:#fff;--text:#0f172a;--muted:#64748b;--accent:#16a34a;--accent-dark:#15803d;--accent-soft:#dcfce7;--border:#e2e8f0;--header:#1e293b}
+:root{--bg:#f1f5f9;--card:#fff;--text:#0f172a;--muted:#64748b;--accent:#16a34a;--accent-dark:#15803d;--border:#e2e8f0;--header:#1e293b}
 *{margin:0;padding:0;box-sizing:border-box;font-family:'Quicksand',sans-serif}
 body{background:var(--bg);color:var(--text);font-size:14px}
 .topbar{position:fixed;top:0;left:0;right:0;height:52px;background:var(--header);display:flex;align-items:center;padding:0 16px;gap:10px;color:#fff;font-weight:700}
@@ -9,19 +9,29 @@ body{background:var(--bg);color:var(--text);font-size:14px}
 .wrap{margin-top:60px;padding:16px;max-width:1000px}
 .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
 .tabs button{background:#fff;border:1px solid var(--border);padding:9px 14px;border-radius:8px;font-weight:700;cursor:pointer}
-.tabs button.ativo,.tabs button:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
-.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:14px}
-h2{font-size:20px}h3{font-size:16px;margin-bottom:10px}
-input,select{padding:9px 12px;border:1px solid var(--border);border-radius:7px;margin:3px;font-size:13px}
+.tabs button:hover{background:var(--accent);color:#fff}
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px}
+input,select{padding:9px 12px;border:1px solid var(--border);border-radius:7px;margin:3px}
 .btn{background:var(--accent);color:#fff;border:0;padding:9px 16px;border-radius:7px;font-weight:700;cursor:pointer;margin:3px}
-.btn2{background:#fff;border:1px solid var(--border);padding:8px 12px;border-radius:7px;cursor:pointer}
-table{width:100%;border-collapse:collapse;font-size:13px;background:#fff}
-td,th{padding:8px;border-bottom:1px solid var(--border);text-align:left}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.ok{background:#dcfce7;color:#15803d}.warn{background:#fef3c7;color:#92400e}.danger{background:#fee2e2;color:#dc2626}
+table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:8px;border-bottom:1px solid var(--border);text-align:left}
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin:10px 0}
+.kpi div{background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:10px}
 </style></head><body>
-<div class="topbar"><button onclick="location.href='/admin'">← Dashboard</button><div>Panificadora<span style="color:#16a34a">ERP</span> - Extra</div></div>
+<div class="topbar"><button onclick="location.href='/admin'">← Dashboard</button><div>Panificadora ERP - Extra</div></div>
 <div class="wrap">
-<div class="tabs" id="tabs">
-<button onclick="aba('bancos')">Bancos</button><button onclick="aba('nf')">NF</button><button onclick="aba('dre')">DRE</button><button onclick="aba('agenda')">Agenda</button><button onclick="aba('arq')">Arquivos</button><button onclick="aba('ponto')">Ponto</button><button onclick="aba('bot')">Bot Celular</button><button onclick="aba('integ')">Integrações</button>
+<div class="tabs">
+<button onclick="aba('bancos')">Bancos</button>
+<button onclick="aba('nf')">NF</button>
+<button onclick="aba('dre')">DRE</button>
+<button onclick="aba('agenda')">Agenda</button>
+<button onclick="aba('arq')">Arquivos</button>
+<button onclick="aba('ponto')">Ponto</button>
+<button onclick="aba('bot')">Bot Celular</button>
+<button onclick="aba('integ')">Integrações</button>
+<button onclick="aba('comparar')">Comparar</button>
+<button onclick="aba('audit')">Auditoria</button>
 </div>
 <div id="tela" class="card">...</div>
 </div>
@@ -29,8 +39,9 @@ td,th{padding:8px;border-bottom:1px solid var(--border);text-align:left}
 const B=location.origin;
 async function GET(p){return await fetch(B+p).then(r=>r.json());}
 async function POST(p,d){return await fetch(B+p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}).then(r=>r.json());}
-function aba(t){document.querySelectorAll('#tabs button').forEach(b=>b.classList.remove('ativo'));event.target.classList.add('ativo');location.hash=t;if(t=='bancos')telaBancos();if(t=='nf')telaNF();if(t=='dre')telaDRE();if(t=='agenda')telaAgenda();if(t=='arq')telaArq();if(t=='ponto')telaPonto();if(t=='bot')telaBot();if(t=='integ')telaInteg();}
-async function telaBancos(){document.getElementById('tela').innerHTML='<h3>Vincular Bancos</h3><div id="lc">...</div>Banco <input id="bc"><input id="ag" placeholder="ag/conta"><button class="btn" onclick="saveBanco()">Salvar</button><br>Maq <select id="op"><option>Cielo</option><option>Rede</option><option>Stone</option></select><input id="tx" value="1.99" size="5"><button class="btn" onclick="saveMaq()">Salvar maq</button><br>iFood Total <input id="ift" type="number" size="6"><button class="btn" onclick="syncIf()">Puxar</button><br>Boleto <input id="blp" placeholder="cliente"><input id="blv" type="number" placeholder="valor"><input id="bld" type="date"><button class="btn" onclick="gerBl()">Gerar</button><div id="blo"></div>';const r=await GET('/api/bancos/vinculos');document.getElementById('lc').innerHTML='Contas:'+JSON.stringify(r.contas||[]).slice(0,1000);}
+function aba(t){location.hash=t;if(t=='bancos')telaBancos();if(t=='nf')telaNF();if(t=='dre')telaDRE();if(t=='agenda')telaAgenda();if(t=='arq')telaArq();if(t=='ponto')telaPonto();if(t=='bot')telaBot();if(t=='integ')telaInteg();if(t=='comparar')telaComparar();if(t=='audit')telaAudit();}
+async function statusBancos(){try{const r=await GET('/api/bancos/config');let h='';(r.configs||[]).forEach(c=>{h+=c.tipo+': '+(c.ativo?'<span class="badge ok">CONECTADO '+c.provedor+'</span>':'<span class="badge warn">MANUAL</span>')+' ';});return h||'sem config';}catch(e){return '...';}}
+async function telaBancos(){document.getElementById('tela').innerHTML='<h3>Vincular Bancos</h3><div id="st">status...</div><div id="lc">...</div>Banco <input id="bc"><input id="ag" placeholder="ag/conta"><button class="btn" onclick="saveBanco()">Salvar</button><br>Maq <select id="op"><option>Cielo</option><option>Rede</option><option>Stone</option></select><input id="tx" value="1.99" size="5"><button class="btn" onclick="saveMaq()">Salvar maq</button><br>iFood Total <input id="ift" type="number" size="6"><button class="btn" onclick="syncIf()">Puxar</button> <button class="btn" onclick="aba(\'integ\')">Entrar p/ Administrar</button><br>Boleto <input id="blp" placeholder="cliente"><input id="blv" type="number" placeholder="valor"><input id="bld" type="date"><button class="btn" onclick="gerBl()">Gerar</button><div id="blo"></div>';document.getElementById('st').innerHTML=await statusBancos();const r=await GET('/api/bancos/vinculos');document.getElementById('lc').innerHTML='Contas:'+JSON.stringify(r.contas||[]).slice(0,1500);}
 async function saveBanco(){await POST('/api/bancos/conta',{banco:bc.value,ag_conta:ag.value});telaBancos();}
 async function saveMaq(){await POST('/api/bancos/maquininha',{operadora:op.value,taxa:tx.value});telaBancos();}
 async function syncIf(){const r=await POST('/api/ifood/sync',{total:ift.value});alert('pedido '+r.pedido_id);telaBancos();}
@@ -42,14 +53,32 @@ async function verDRE(){const r=await GET('/api/dre_resumo');document.getElement
 async function sim(){const r=await POST('/api/dre/simular',{faturamento:sf.value,custo:sc.value,regime:sr.value});document.getElementById('simo').innerHTML='PIS '+r.pis+' COF '+r.cofins+' ICMS '+r.icms+' ISS '+r.iss+' LUCRO '+r.lucro;}
 async function telaAgenda(){document.getElementById('tela').innerHTML='<h3>Agenda</h3>Tit<input id="et">Ini<input id="ei" type="datetime-local">Fim<input id="ef" type="datetime-local"><button class="btn" onclick="saveEv()">Agendar</button><div id="la"></div>';const r=await GET('/api/agenda_lista');document.getElementById('la').innerHTML=JSON.stringify(r.eventos||[]).slice(0,2000);}
 async function saveEv(){await POST('/api/agenda/criar',{titulo:et.value,inicio:ei.value,fim:ef.value});telaAgenda();}
-async function telaArq(){document.getElementById('tela').innerHTML='<h3>Arquivos - upload</h3>Cat<select id="ac"><option>PRODUTO</option><option>FUNCIONARIO</option><option>REGISTRO</option></select> Ref<input id="ar"> <input id="af" type="file"><button class="btn" onclick="saveArFile()">Fazer Upload</button><div id="lar"></div><div id="lup"></div>';const r=await GET('/api/arquivos_lista');document.getElementById('lar').innerHTML=(r.arquivos||[]).map(a=>'<div><a href="'+a.url+'" target="_blank">'+a.nome+'</a> - '+a.categoria+'</div>').join('').slice(0,4000);}
+async function telaArq(){document.getElementById('tela').innerHTML='<h3>Arquivos - upload</h3>Cat<select id="ac"><option>PRODUTO</option><option>FUNCIONARIO</option><option>REGISTRO</option></select> Ref<input id="ar"> <input id="af" type="file"><button class="btn" onclick="saveArFile()">Fazer Upload</button><div id="lar"></div><div id="lup"></div>';const r=await GET('/api/arquivos_lista');document.getElementById('lar').innerHTML=(r.arquivos||[]).map(a=>'<div><a href="'+a.url+'" target="_blank">'+a.nome+'</a></div>').join('').slice(0,4000);}
 async function saveArFile(){const f=document.getElementById('af').files[0];if(!f){alert('escolhe');return;}const fd=new FormData();fd.append('file',f);fd.append('categoria',ac.value);fd.append('referencia',ar.value);const r=await fetch(B+'/api/arquivos/upload',{method:'POST',body:fd}).then(r=>r.json());document.getElementById('lup').innerHTML=JSON.stringify(r);telaArq();}
-async function telaPonto(){document.getElementById('tela').innerHTML='<h3>Ponto</h3><div id="lp">...</div>Mat<input id="pm" size="8">Data<input id="pd" type="date">Ent<input id="pe" type="time" value="08:00">Sai<input id="ps" type="time" value="17:00"><button class="btn" onclick="savePt()">Registrar</button><br>Atest Mat<input id="am" size="8">Data<input id="ad" type="date">Dias<input id="adi" value="1" size="3"><button class="btn" onclick="saveAt()">Atestado</button>';const r=await GET('/api/rh/ponto_calc');document.getElementById('lp').innerHTML=JSON.stringify(r).slice(0,2000);}
+async function telaPonto(){document.getElementById('tela').innerHTML='<h3>Ponto</h3><div id="lp">...</div>Mat<input id="pm" size="8">Data<input id="pd" type="date">Ent<input id="pe" type="time" value="08:00">Sai<input id="ps" type="time" value="17:00"><button class="btn" onclick="savePt()">Registrar</button>';const r=await GET('/api/rh/ponto_calc');document.getElementById('lp').innerHTML=JSON.stringify(r).slice(0,2000);}
 async function savePt(){await POST('/api/rh/ponto/registrar2',{funcionario_matricula:pm.value,data:pd.value,entrada:pe.value,saida:ps.value});telaPonto();}
-async function saveAt(){await POST('/api/rh/atestados/criar',{funcionario_matricula:am.value,data:ad.value,dias:adi.value});telaPonto();}
-async function telaBot(){document.getElementById('tela').innerHTML='<h3>Bot Celular - por ultimo</h3><input id="bmsg" placeholder="oi" size="20"><button class="btn" onclick="testBot()">Testar</button><div id="bchat"></div>';}
+async function telaBot(){document.getElementById('tela').innerHTML='<h3>Bot Celular - por ultimo</h3><input id="bmsg" size="20"><button class="btn" onclick="testBot()">Testar</button><div id="bchat"></div>';}
 async function testBot(){const m=bmsg.value;document.getElementById('bchat').innerHTML+='<br>Voce:'+m;const r=await POST('/api/bot/responder',{mensagem:m});document.getElementById('bchat').innerHTML+='<br>Bot:'+(r.resposta||JSON.stringify(r));}
-async function telaInteg(){document.getElementById('tela').innerHTML='<h3>Integracoes</h3><div id="lcfg">...</div>Tipo<select id="it"><option>BANCO</option><option>IFOOD</option><option>NF</option><option>BOLETO</option><option>BOT</option></select> Prov<input id="ip" size="15"><br>Key<input id="ik" size="30"><button class="btn" onclick="saveInteg()">Salvar chave</button>';const r=await GET('/api/bancos/config');document.getElementById('lcfg').innerHTML=JSON.stringify(r.configs||[]).slice(0,2000);}
+async function telaInteg(){document.getElementById('tela').innerHTML='<h3>Integracoes - Bot / iFood / ADM</h3><div id="lcfg">...</div>Tipo<select id="it"><option>BANCO</option><option>IFOOD</option><option>NF</option><option>BOLETO</option><option>BOT</option></select> Prov<input id="ip" size="15"><br>Key<input id="ik" size="30"><button class="btn" onclick="saveInteg()">Salvar chave</button><br><button class="btn" onclick="aba(\'bancos\')">Entrar p/ Administrar Bancos</button>';const r=await GET('/api/bancos/config');document.getElementById('lcfg').innerHTML=JSON.stringify(r.configs||[]).slice(0,2000);}
 async function saveInteg(){await POST('/api/bancos/config',{tipo:it.value,provedor:ip.value,api_key:ik.value});alert('salvo');telaInteg();}
+async function telaComparar(){document.getElementById('tela').innerHTML='<h3>Comparar Loja x iFood x Site</h3><div id="cmp">...</div>';const v=await GET('/api/vendas');const s=await GET('/api/site/pedidos');let loja=0;try{loja=(v.vendas||[]).reduce((a,x)=>a+parseFloat(x.total||0),0);}catch(e){}let site=0,ifood=0;(s.pedidos||[]).forEach(p=>{if((p.forma_pagamento||'')=='IFOOD')ifood+=parseFloat(p.total||0);else site+=parseFloat(p.total||0);});document.getElementById('tela').innerHTML='<h3>Comparar</h3><table><tr><th>Canal</th><th>Total</th><th></th></tr><tr><td>Loja</td><td>R$ '+loja.toFixed(2)+'</td><td><button class="btn" onclick="location.href=\'/admin\'">Abrir Loja</button></td></tr><tr><td>iFood</td><td>R$ '+ifood.toFixed(2)+'</td><td><button class="btn" onclick="aba(\'bancos\')">Administrar</button></td></tr><tr><td>Site</td><td>R$ '+site.toFixed(2)+'</td><td><button class="btn" onclick="window.open(\'/\',\'_blank\')">Ver Site</button></td></tr></table>';}
+async function telaAudit(){
+ document.getElementById('tela').innerHTML='<h3>Auditoria - Caixa / Produtos / Estoque / Estornos / Encomendas</h3><div id="aud">carregando...</div>';
+ const v=await GET('/api/vendas'); const s=await GET('/api/site/pedidos'); const p=await GET('/api/produtos'); const c=await GET('/api/contas');
+ let vendas=(v.vendas||[]); let pedidos=(s.pedidos||[]); let prods=(p.produtos||[]); let contas=(c.contas||[]);
+ let totalLoja=vendas.reduce((a,x)=>a+parseFloat(x.total||0),0);
+ let estornos=vendas.filter(x=>['ESTORNADA','CANCELADA','CANCELADO'].includes((x.status||'').toUpperCase()));
+ let cancSite=pedidos.filter(x=>['CANCELADO','CANCELADA'].includes((x.status||'').toUpperCase()));
+ let encomendas=pedidos.filter(x=>['SOLICITADO','CONFIRMADO','EM_ENTREGA','EM PRODUCAO'].includes((x.status||'').toUpperCase()));
+ let html='<div class="kpi"><div><b>Caixa / Vendas</b><br>Qtd:'+vendas.length+'<br>Total:R$ '+totalLoja.toFixed(2)+'<br><button class="btn" onclick="location.href=\'/admin\'">Abrir Caixa</button></div>';
+ html+='<div><b>Produtos</b><br>Qtd:'+prods.length+'<br><button class="btn" onclick="window.open(\'/\',\'_blank\')">Ver Cardapio</button></div>';
+ html+='<div><b>Estoque</b><br>Itens:'+prods.length+' ativos<br><span class="badge ok">Conferir no PDV</span></div>';
+ html+='<div><b>Estornos Loja</b><br>'+estornos.length+'<br>'+estornos.slice(0,3).map(e=>'#'+e.id+' R$ '+e.total).join('<br>')+'</div>';
+ html+='<div><b>Cancelamentos Site/iFood</b><br>'+cancSite.length+'<br>'+cancSite.slice(0,3).map(e=>'#'+e.id+' '+e.status).join('<br>')+'</div>';
+ html+='<div><b>Encomendas Abertas</b><br>'+encomendas.length+'<br>'+encomendas.slice(0,5).map(e=>'#'+e.id+' '+(e.cliente_nome||'')+' R$ '+(e.total||0)).join('<br>')+'</div></div>';
+ html+='<h3>Detalhe Encomendas</h3><table><tr><th>#</th><th>Cliente</th><th>Total</th><th>Status</th></tr>'+encomendas.map(e=>'<tr><td>'+e.id+'</td><td>'+(e.cliente_nome||'')+'</td><td>'+e.total+'</td><td>'+e.status+'</td></tr>').join('')+'</table>';
+ html+='<h3 style="margin-top:10px">Contas</h3>'+contas.slice(0,5).map(x=>x.descricao+' R$ '+x.valor+' '+x.status).join('<br>');
+ document.getElementById('tela').innerHTML='<h3>Auditoria</h3>'+html;
+}
 let h=location.hash.replace('#','');if(h)aba(h);else telaBancos();
 </script></body></html>
