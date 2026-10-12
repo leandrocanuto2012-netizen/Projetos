@@ -160,10 +160,10 @@ class APIHandler(BaseHTTPRequestHandler):
                             except:
                                 return self.responder({"produtos": [], "recomendados": []})
                     if path == "/api/site/config":
-                    return self.responder({"configuracoes": []})
+                        return self.responder({"configuracoes": []})
                     if path == "/api/bot/config":
-                    return self.responder({"config_geral": [], "regras": []})
-                    return self.responder({"produtos":sel("SELECT * FROM produtos ORDER BY id DESC LIMIT 200")})
+                        return self.responder({"config_geral": [], "regras": []})
+                        return self.responder({"produtos":sel("SELECT * FROM produtos ORDER BY id DESC LIMIT 200")})
                 if path=="/api/clientes": return self.responder({"clientes":sel("SELECT * FROM clientes ORDER BY id DESC LIMIT 200")})
                 if path=="/api/funcionarios": return self.responder({"funcionarios":sel("SELECT id,matricula,nome,cargo,role,status FROM funcionarios ORDER BY id DESC LIMIT 200")})
                 if path=="/api/vendas": return self.responder({"vendas":sel("SELECT * FROM vendas ORDER BY id DESC LIMIT 200")})
