@@ -1,11 +1,1 @@
-if path in ("/api/ia-vendas/produtos", "/api/ia-vendas/produtos-recomendados"):
-    try:
-        cur.execute("SELECT * FROM produtos WHERE status='ATIVO' ORDER BY id DESC LIMIT 100")
-        lst = [dict(r) for r in cur.fetchall() or []]
-        return self.responder({"produtos": lst, "recomendados": lst[:6]})
-    except:
-        return self.responder({"produtos": [], "recomendados": []})
-if path == "/api/site/config":
-    return self.responder({"configuracoes": []})
-if path == "/api/bot/config":
-    return self.responder({"config_geral": [], "regras": []})
+<div class="menu-item" onclick="window.open('/extra','_blank')">Vincular Bancos / NF / DRE</div>
