@@ -1,4 +1,6 @@
-import os, json, hashlib, random, uuid
+  cur.execute("CREATE TABLE IF NOT EXISTS frota_veiculos (id SERIAL PRIMARY KEY, placa TEXT, modelo TEXT, ano INT DEFAULT 2020, km NUMERIC DEFAULT 0, status TEXT DEFAULT 'ATIVO', motorista TEXT)")
+  cur.execute("CREATE TABLE IF NOT EXISTS frota_manutencoes (id SERIAL PRIMARY KEY, veiculo_id INT, tipo TEXT, descricao TEXT, custo NUMERIC DEFAULT 0, data DATE DEFAULT CURRENT_DATE)")
+  cur.execute("CREATE TABLE IF NOT EXISTS frota_abastecimentos (id SERIAL PRIMARY KEY, veiculo_id INT, litros NUMERIC DEFAULT 0, valor NUMERIC DEFAULT 0, km_atual NUMERIC DEFAULT 0, data DATE DEFAULT CURRENT_DATE)")import os, json, hashlib, random, uuid
 import psycopg2, psycopg2.extras
 from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -226,6 +228,9 @@ def run():
  server=HTTPServer(("0.0.0.0",port),APIHandler)
  print(f"Rodando {port}",flush=True)
  server.serve_forever()
+  cur.execute("CREATE TABLE IF NOT EXISTS frota_veiculos (id SERIAL PRIMARY KEY, placa TEXT, modelo TEXT, ano INT DEFAULT 2020, km NUMERIC DEFAULT 0, status TEXT DEFAULT 'ATIVO', motorista TEXT)")
+  cur.execute("CREATE TABLE IF NOT EXISTS frota_manutencoes (id SERIAL PRIMARY KEY, veiculo_id INT, tipo TEXT, descricao TEXT, custo NUMERIC DEFAULT 0, data DATE DEFAULT CURRENT_DATE)")
+  cur.execute("CREATE TABLE IF NOT EXISTS frota_abastecimentos (id SERIAL PRIMARY KEY, veiculo_id INT, litros NUMERIC DEFAULT 0, valor NUMERIC DEFAULT 0, km_atual NUMERIC DEFAULT 0, data DATE DEFAULT CURRENT_DATE)")
 
 if __name__=="__main__":
  run()
