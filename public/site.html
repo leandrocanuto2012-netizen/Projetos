@@ -304,6 +304,43 @@ async function carregarInfo(){
     if(c.nome==='nome_bot'){document.getElementById('botName').textContent=c.valor}
   });
 }
+  async function renderClientes(){
+    const r = await apiGET('/api/clientes');
+    (le.clientes).forEach(le=
+      if (le.content) = document.getElementById('content');
+      if (le.innerHTML) = `<h1 class="page-title">Clientes</h1><p class="page-sub">Cadastro de clientes.</p>
+    <div class="card"><button class="btn btn-primary" onclick="modalCliente()"><i data-lucide="plus"></i> Novo Cliente</button></div>
+    <div class="card" id="cliTable"><div class="empty-state"><i data-lucide="loader-2"></i><p>Carregando...</p></div></div>`;
+  lucide.createIcons();
+  const r = await apiGET('/api/clientes');
+  document.getElementById('cliTable').innerHTML = tabelaSimples(r.clientes, [
+    {chave:'nome',titulo:'Nome'}, {chave:'cpf_cnpj',titulo:'CPF/CNPJ'},
+    {chave:'telefone',titulo:'Telefone'}, {chave:'email',titulo:'Email'}
+  ]);
+  lucide.createIcons();
+}
+function modalCliente(){
+  document.getElementById('modalContainer').innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)this.remove()">
+    <div class="modal"><h3><i data-lucide="user-plus"></i> Novo Cliente</h3>
+      <div class="form-grid">
+        <div class="form-group"><label>Nome *</label><input id="cNome"></div>
+        <div class="form-group"><label>CPF/CNPJ</label><input id="cDoc"></div>
+        <div class="form-group"><label>Telefone</label><input id="cTel"></div>
+        <div class="form-group"><label>Email</label><input id="cEmail"></div>
+        <div class="form-group" style="grid-column:1/-1"><label>EndereÃ§o</label><input id="cEnd"></div>
+      </div>
+      <div class="form-actions"><button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarCliente()"><i data-lucide="save"></i> Salvar</button></div></div></div>`;
+  lucide.createIcons();
+}
+async function salvarCliente(){
+  const r = await apiPOST('/api/clientes/salvar', {...userPayload(),
+    nome:document.getElementById('cNome').value, cpf_cnpj:document.getElementById('cDoc').value,
+    telefone:document.getElementById('cTel').value, email:document.getElementById('cEmail').value,
+    endereco:document.getElementById('cEnd').value});
+  if(r.sucesso){ toast('Cliente salvo!'); document.querySelector('.modal-overlay').remove(); renderClientes(); }
+  else toast(r.erro||'Erro','error');
+}
 
 // Carrinho
 function addCarrinho(p){
