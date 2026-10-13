@@ -233,83 +233,74 @@ async function saveC(){
   document.getElementById('pct').innerHTML=r.texto||JSON.stringify(r);
   document.getElementById('printCont').innerHTML='<h2>CONTRATO</h2><p>'+(r.texto||'').replace(/\n/g,'<br>')+'</p>';
 }
-async function telaRel(){
- document.getElementById('tela').innerHTML='<h3>Relatorios Gerenciais - todas funcoes</h3>'
- +'<div class="noprint">Tipo <select id="rtipo"><option value="vendas">Vendas / Caixa</option><option value="financeiro">Financeiro Contas</option><option value="estoque">Produtos / Estoque</option><option value="ponto">Ponto / RH / Ajustes / Atestados</option><option value="fiscal">Fiscal NF / DRE / Faturamento</option><option value="contratos">Contratos</option><option value="agenda">Agenda</option><option value="bancos">Bancos / Integracoes</option><option value="producao">Producao</option><option value="auditoria">Auditoria</option></select> '
- +'Periodo <select id="rper"><option value="todos">Todos</option><option value="hoje">Hoje</option><option value="7d">Ultimos 7 dias</option><option value="30d">Ultimos 30 dias</option><option value="mes">Este mes</option></select> '
- +'<button class="btn" onclick="verRel()">Ver Preview</button> <button class="btn" onclick="window.print()">Imprimir / PDF</button></div>'
- +'<div id="rprev" class="preview">Escolhe tipo + periodo...</div>';
-}
 async function verRel(){
  let t=document.getElementById('rtipo').value;
  let per=document.getElementById('rper').value;
- document.getElementById('rprev').innerHTML='carregando...';
+ document.getElementById('rprev').innerHTML='buscando...';
+ document.getElementById('printCont').innerHTML='';
  let h='';
- if(t=='vendas'){
-  const v=await GET('/api/vendas');
-  let l=filtra(v.vendas||[],per);
-  let tot=l.reduce((a,x)=>a+parseFloat(x.total||0),0);
-  h='<b>REGRA:</b> Venda so com caixa aberto. Estorno exige ADM.<br>Total '+fmt(tot)+' Qtd '+l.length+'<br>'+tabela(['ID','Cliente','Total','Status'],l.slice(0,30).map(x=>[x.id,x.cliente_nome||'',fmt(x.total),x.status||'CONFIRMADA']));
- }
- if(t=='financeiro'){
-  const c=await GET('/api/contas');
-  let l=filtra(c.contas||[],per);
-  let rec=l.filter(x=>x.tipo=='RECEBER').reduce((a,x)=>a+parseFloat(x.valor||0),0);
-  let pag=l.filter(x=>x.tipo=='PAGAR').reduce((a,x)=>a+parseFloat(x.valor||0),0);
-  h='<b>REGRA:</b> Receber 7d multa 2%. Pagar prioriza folha.<br>Rec '+fmt(rec)+' Pag '+fmt(pag)+' Saldo '+fmt(rec-pag)+'<br>'+tabela(['Pessoa','Tipo','Valor','Status'],l.slice(0,30).map(x=>[x.pessoa,x.tipo,fmt(x.valor),x.status]));
- }
- if(t=='estoque'){
-  const p=await GET('/api/produtos');
-  let l=filtra(p.produtos||[],per);
-  h='<b>REGRA:</b> Minimo 20 paes / 10 bolos.<br>'+tabela(['Nome','Preco','Status'],l.slice(0,30).map(x=>[x.nome,fmt(x.preco_venda),x.status]));
- }
- if(t=='ponto'){
-  const r=await GET('/api/rh/ponto_calc');
-  let lp=filtra(r.ponto||[],per);
-  h='<b>REGRA:</b> Extra 50%. Atestado abona.<br>Pontos '+lp.length+' Ajustes '+(r.ajustes||[]).length+' Atestados '+(r.atestados||[]).length+'<br>'+tabela(['Data','Mat','Ent','Sai'],lp.slice(0,20).map(x=>[x.data,x.funcionario_matricula,x.entrada,x.saida]))+'<br>'+tabela(['Mat','Campo','Novo'],(r.ajustes||[]).slice(0,10).map(x=>[x.funcionario_matricula,x.campo,x.valor_novo]));
- }
- if(t=='fiscal'){
-  const n=await GET('/api/nf_lista');
-  const d=await GET('/api/dre_resumo');
-  const f=await GET('/api/faturamento_resumo');
-  let ln=filtra(n.notas||[],per);
-  h='<b>DRE Lucro:</b> '+fmt(d.lucro)+' <b>Fat Total:</b> '+fmt(f.total)+'<br>'+tabela(['Tipo','Num','Pessoa','Total'],ln.slice(0,20).map(x=>[x.tipo,x.numero,x.pessoa||'',fmt(x.total)]));
- }
- if(t=='contratos'){
-  const c=await GET('/api/contratos_lista');
-  let l=filtra(c.contratos||[],per);
-  h=tabela(['ID','Cliente','Valor','Status'],l.map(x=>[x.id,x.cliente,fmt(x.valor),x.status||'RASCUNHO']));
- }
- if(t=='agenda'){
-  const a=await GET('/api/agenda_lista');
-  let l=filtra(a.eventos||[],per);
-  h=tabela(['Titulo','Inicio','Fim'],l.map(x=>[x.titulo,x.inicio,x.fim||'']));
- }
- if(t=='bancos'){
-  const b=await GET('/api/bancos/config');
-  const v=await GET('/api/bancos/vinculos');
-  h='<b>Integracoes:</b><br>'+tabela(['Tipo','Prov','Ativo'],(b.configs||[]).map(x=>[x.tipo,x.provedor,x.ativo?'SIM':'NAO']))+'<br><b>Contas:</b><br>'+tabela(['Banco','Conta'],(v.contas||[]).map(x=>[x.banco,x.ag_conta]));
- }
- if(t=='producao'){
-  const pr=await GET('/api/producao/acompanhamento');
-  let l=pr.ordens||[];
-  h=tabela(['Produto','Pronta/Meta','Quem','Status'],l.slice(0,20).map(x=>[x.produto_nome,(x.qtd_pronta+'/'+x.qtd_meta),x.responsavel_nome,x.status]));
- }
- if(t=='auditoria'){
-  const a=await GET('/api/auditoria_resumo');
-  h='Vendas '+(a.vendas||[]).length+' Produtos '+(a.produtos||[]).length+' Pedidos '+(a.pedidos||[]).length+'<br>'+tabela(['ID','Total'],(a.vendas||[]).slice(0,20).map(x=>[x.id,fmt(x.total)]));
- }
+ try{
+  if(t=='vendas'){
+   const v=await GET('/api/vendas');
+   let l=filtra(v.vendas||[],per);
+   if(!l.length){h='<b>Nenhum relatório encontrado para Vendas - '+per+'</b><br>Tenta Todos ou cadastra venda no /admin.';}
+   else{let tot=l.reduce((a,x)=>a+parseFloat(x.total||0),0);h='Total '+fmt(tot)+' Qtd '+l.length+'<br>'+tabela(['ID','Cliente','Total'],l.slice(0,30).map(x=>[x.id,x.cliente_nome||'',fmt(x.total)]));}
+  }
+  if(t=='financeiro'){
+   const c=await GET('/api/contas');
+   let l=filtra(c.contas||[],per);
+   if(!l.length){h='<b>Nenhum relatório encontrado para Financeiro - '+per+'</b>';}
+   else{h=tabela(['Pessoa','Tipo','Valor'],l.slice(0,30).map(x=>[x.pessoa,x.tipo,fmt(x.valor)]));}
+  }
+  if(t=='estoque'){
+   const p=await GET('/api/produtos');
+   let l=filtra(p.produtos||[],per);
+   if(!l.length){h='<b>Nenhum relatório encontrado para Estoque - '+per+'</b>';}
+   else{h=tabela(['Nome','Preço'],l.slice(0,30).map(x=>[x.nome,fmt(x.preco_venda)]));}
+  }
+  if(t=='ponto'){
+   const r=await GET('/api/rh/ponto_calc');
+   let l=filtra(r.ponto||[],per);
+   if(!l.length && !(r.ajustes||[]).length){h='<b>Nenhum relatório encontrado para Ponto - '+per+'</b>';}
+   else{h=tabela(['Data','Mat'],l.slice(0,20).map(x=>[x.data,x.funcionario_matricula]));}
+  }
+  if(t=='fiscal'){
+   const n=await GET('/api/nf_lista');
+   let l=filtra(n.notas||[],per);
+   if(!l.length){h='<b>Nenhum relatório encontrado para Fiscal - '+per+'</b><br>Emite 1 NF primeiro.';}
+   else{h=tabela(['Tipo','Num'],l.slice(0,20).map(x=>[x.tipo,x.numero]));}
+  }
+  if(t=='contratos'){
+   const c=await GET('/api/contratos_lista');
+   let l=filtra(c.contratos||[],per);
+   if(!l.length){h='<b>Nenhum relatório encontrado para Contratos</b>';}
+   else{h=tabela(['ID','Cliente'],l.map(x=>[x.id,x.cliente]));}
+  }
+  if(t=='agenda'){
+   const a=await GET('/api/agenda_lista');
+   let l=filtra(a.eventos||[],per);
+   if(!l.length){h='<b>Nenhum relatório encontrado para Agenda - '+per+'</b>';}
+   else{h=tabela(['Titulo','Inicio'],l.map(x=>[x.titulo,x.inicio]));}
+  }
+  if(t=='bancos'){
+   const b=await GET('/api/bancos/config');
+   if(!(b.configs||[]).length){h='<b>Nenhum relatório encontrado para Bancos</b><br>Salva 1 chave em Integrações.';}
+   else{h=tabela(['Tipo','Prov'],(b.configs||[]).map(x=>[x.tipo,x.provedor]));}
+  }
+  if(t=='producao'){
+   const pr=await GET('/api/producao/acompanhamento');
+   let l=pr.ordens||[];
+   if(!l.length){h='<b>Nenhum relatório encontrado para Produção</b><br>Inicia 1 ordem em Produção.';}
+   else{h=tabela(['Produto','Qtd'],l.slice(0,20).map(x=>[x.produto_nome,x.qtd_pronta+'/'+x.qtd_meta]));}
+  }
+  if(t=='auditoria'){
+   const a=await GET('/api/auditoria_resumo');
+   if(!(a.vendas||[]).length){h='<b>Nenhum relatório encontrado para Auditoria</b>';}
+   else{h=tabela(['ID','Total'],(a.vendas||[]).slice(0,20).map(x=>[x.id,fmt(x.total)]));}
+  }
+ }catch(e){h='<b>Erro ao buscar relatório:</b> '+e.message;}
  document.getElementById('rprev').innerHTML=h;
- document.getElementById('printCont').innerHTML='<h2>RELATORIO '+t.toUpperCase()+' - '+per+'</h2>'+h;
-}
-async function verRel(){
-  let t=document.getElementById('rtipo').value;let per=document.getElementById('rper').value;
-  if(t=='vendas'){const v=await GET('/api/vendas');let l=filtra(v.vendas||[],per);document.getElementById('rprev').innerHTML=tabela(['ID','Total'],l.map(x=>[x.id,fmt(x.total)]));}
-  else{const c=await GET('/api/contas');let l=filtra(c.contas||[],per);document.getElementById('rprev').innerHTML=tabela(['Pessoa','Valor'],l.map(x=>[x.pessoa,fmt(x.valor)]));}
-}
-async function telaProd(){
-  document.getElementById('tela').innerHTML='<h3>Produção - acompanhamento</h3><label><input type="checkbox" id="prodAdm" checked onchange="verProd()"> ADM completo</label> Minha mat<input id="pminhamat" size="8"><button class="btn" onclick="verProd()">Ver</button><div class="preview">Novo: Produto<input id="ppnome" size="10"> Qtd<input id="ppqtd" type="number" size="4"> Resp<input id="ppresp" size="8"> Mat<input id="ppmat" size="6"> Fim<input id="ppfim" type="datetime-local"> Custo<input id="ppcusto" type="number" size="5"> Preco<input id="pppreco" type="number" size="5"><button class="btn" onclick="iniciaProd()">Iniciar</button></div><div id="pplist"></div>';
-  verProd();
+ document.getElementById('printCont').innerHTML='<h2>REL '+t+' '+per+'</h2>'+h;
 }
 async function verProd(){
   const r=await GET('/api/producao/acompanhamento');
