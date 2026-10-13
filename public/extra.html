@@ -127,8 +127,27 @@ async function verProd(){
 async function iniciaProd(){await POST('/api/producao/iniciar',{produto_nome:document.getElementById('ppnome').value,qtd_meta:document.getElementById('ppqtd').value,responsavel_nome:document.getElementById('ppresp').value,responsavel_matricula:document.getElementById('ppmat').value,previsao_fim:document.getElementById('ppfim').value,custo_insumos:document.getElementById('ppcusto').value,preco_un:document.getElementById('pppreco').value});telaProd();}
 async function atualizaProd(id){let q=prompt('Qtd pronta?');if(!q)return;await POST('/api/producao/atualizar',{id:id,qtd_pronta:q});verProd();}
 async function concluiProd(id){await POST('/api/producao/concluir',{id:id});verProd();}
-async function telaFrota(){document.getElementById('tela').innerHTML='<h3>Frota</h3><div id="fl"></div>Placa<input id="fplaca" size="8"><button class="btn" onclick="saveFrota()">Salvar</button>';const r=await GET('/api/frota_lista');document.getElementById('fl').innerHTML=tabela(['Placa'],(r.veiculos||[]).map(x=>[x.placa]));}
-async function saveFrota(){await POST('/api/frota/veiculo/criar',{placa:document.getElementById('fplaca').value});telaFrota();}
+async function telaFrota(){
+ document.getElementById('tela').innerHTML='<h3>Frota de Veículos - padrão completo</h3>'
+ +'<div class="noprint">Placa<input id="fplaca" size="8"> Modelo<input id="fmod" size="12"> Ano<input id="fano" type="number" value="2020" style="width:70px"> Km<input id="fkm" type="number" size="6"> Motorista<input id="fmot" size="10"> <button class="btn" onclick="saveFrota()">Salvar Veículo</button> '
+ +'<button class="btn" onclick="verFrota()">Ver Preview</button> <button class="btn" onclick="window.print()">Imprimir</button></div>'
+ +'<div id="fprev" class="preview">...</div><div id="fdet"></div>';
+ verFrota();
+}
+async function verFrota(){
+ const r=await GET('/api/frota_lista');
+ let veiculos=r.veiculos||[];let man=r.manutencoes||[];let ab=r.abastecimentos||[];
+ let h='<b>Veículos:</b><br>'+tabela(['ID','Placa','Modelo','Km','Motorista','Status'],veiculos.map(x=>[x.id,x.placa,x.modelo,x.km,x.motorista||'',x.status]));
+ h+='<br><b>Manutenção - lançar:</b> Veic ID<input id="mvid" size="3"> Tipo<select id="mtipo"><option>REVISAO</option><option>TROCA_OLEO</option><option>PNEU</option><option>FREIO</option><option>OUTRA</option></select> Desc<input id="mdesc" size="12"> Custo<input id="mcusto" type="number" size="6"> Data<input id="mdata" type="date"> <button class="btn" onclick="saveManut()">Salvar Manutenção</button>';
+ h+='<br>'+tabela(['Veic','Tipo','Custo','Data'],man.slice(0,20).map(x=>[x.veiculo_id,x.tipo,fmt(x.custo),x.data]));
+ h+='<br><b>Abastecimento - lançar:</b> Veic ID<input id="avid" size="3"> Litros<input id="alit" type="number" size="5"> Valor<input id="aval" type="number" size="6"> Km atual<input id="akm" type="number" size="6"> Data<input id="adata" type="date"> <button class="btn" onclick="saveAbast()">Salvar Abastec.</button>';
+ h+='<br>'+tabela(['Veic','Litros','Valor','Km'],ab.slice(0,20).map(x=>[x.veiculo_id,x.litros,fmt(x.valor),x.km_atual]));
+ document.getElementById('fprev').innerHTML=h;
+ document.getElementById('printCont').innerHTML='<h2>FROTA</h2>'+h;
+}
+async function saveFrota(){await POST('/api/frota/veiculo/criar',{placa:document.getElementById('fplaca').value,modelo:document.getElementById('fmod').value,ano:document.getElementById('fano').value,km:document.getElementById('fkm').value,motorista:document.getElementById('fmot').value});verFrota();}
+async function saveManut(){await POST('/api/frota/manutencao/criar',{veiculo_id:document.getElementById('mvid').value,tipo:document.getElementById('mtipo').value,descricao:document.getElementById('mdesc').value,custo:document.getElementById('mcusto').value,data:document.getElementById('mdata').value});verFrota();}
+async function saveAbast(){await POST('/api/frota/abastecer',{veiculo_id:document.getElementById('avid').value,litros:document.getElementById('alit').value,valor:document.getElementById('aval').value,km_atual:document.getElementById('akm').value,data:document.getElementById('adata').value});verFrota();}
 let h=location.hash.replace('#','');if(h)aba(h);else telaProd();
 </script>
 </body>
