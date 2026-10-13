@@ -1,6 +1,4 @@
-  cur.execute("CREATE TABLE IF NOT EXISTS frota_veiculos (id SERIAL PRIMARY KEY, placa TEXT, modelo TEXT, ano INT DEFAULT 2020, km NUMERIC DEFAULT 0, status TEXT DEFAULT 'ATIVO', motorista TEXT)")
-  cur.execute("CREATE TABLE IF NOT EXISTS frota_manutencoes (id SERIAL PRIMARY KEY, veiculo_id INT, tipo TEXT, descricao TEXT, custo NUMERIC DEFAULT 0, data DATE DEFAULT CURRENT_DATE)")
-  cur.execute("CREATE TABLE IF NOT EXISTS frota_abastecimentos (id SERIAL PRIMARY KEY, veiculo_id INT, litros NUMERIC DEFAULT 0, valor NUMERIC DEFAULT 0, km_atual NUMERIC DEFAULT 0, data DATE DEFAULT CURRENT_DATE)")import os, json, hashlib, random, uuid
+import os, json, hashlib, random, uuid
 import psycopg2, psycopg2.extras
 from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -140,6 +138,7 @@ class APIHandler(BaseHTTPRequestHandler):
       return [dict(r) for r in (cur.fetchall() or [])]
      except: return []
     if path=="/api/health": return self.responder({"status":"ok"})
+    if path=="/api/frota_lista": return self.responder({"veiculos":sel("SELECT * FROM frota_veiculos ORDER BY id DESC LIMIT 100"),"manutencoes":sel("SELECT * FROM frota_manutencoes ORDER BY id DESC LIMIT 100"),"abastecimentos":sel("SELECT * FROM frota_abastecimentos ORDER BY id DESC LIMIT 100")})
     if path=="/api/dashboard/resumo": return self.responder({"vendas_hoje":0,"vendas_mes":0,"estoque_baixo":0,"vendas_7d":[],"saldo_bancos":0,"receber_hoje":0,"pagar_hoje":0})
     if path=="/api/gerente/alertas": return self.responder({"alertas":[]})
     if path=="/api/produtos": return self.responder({"produtos":sel("SELECT * FROM produtos ORDER BY id DESC LIMIT 200")})
