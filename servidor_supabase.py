@@ -381,7 +381,7 @@ class APIHandler(BaseHTTPRequestHandler):
                     cur.execute("INSERT INTO eventos_agenda (titulo,inicio) VALUES (%s,%s)",(d.get("titulo"),d.get("inicio")))
                     return self.responder({"sucesso":True})
                 if path=="/api/rh/ponto/registrar2":
-                    cur.execute("INSERT INTO ponto_registros (funcionario_matricula,data,entrada,saida) VALUES (%s,%s,%s,%s)",(d.get("funcionario_matricula"),d.get("data"),d.get("entrada"),d.get("saida")))
+                    cur.execute("INSERT INTO ponto_rpegistros (funcionario_matricula,data,entrada,saida) VALUES (%s,%s,%s,%s)",(d.get("funcionario_matricula"),d.get("data"),d.get("entrada"),d.get("saida")))
                     return self.responder({"sucesso":True})
                 if path=="/api/rh/ponto/ajustar":
                     cur.execute("INSERT INTO ponto_ajustes (funcionario_matricula,campo,valor_novo) VALUES (%s,%s,%s)",(d.get("funcionario_matricula"),d.get("campo"),d.get("valor_novo")))
@@ -399,13 +399,49 @@ class APIHandler(BaseHTTPRequestHandler):
                 if path=="/api/contratos/assinar":
                     cur.execute("UPDATE contratos SET status='ASSINADO' WHERE id=%s",(d.get("id"),))
                     return self.responder({"sucesso":True})
-                if path=="/api/bot/responder":
-                    msg=str(d.get("mensagem") or "").lower()
-                    if "preco" in msg: resp="Precos no cardapio do site."
-                    elif "hora" in msg: resp="Atendemos seg a sab 7h as 19h."
-                    elif "oi" in msg: resp="Ola! Sou o bot da padaria."
-                    else: resp="Entendi. Posso ajudar com pedido."
-                    return self.responder({"resposta":resp})
+                if path in ("/api/bot/responder","/api/ia-vendas/chat"):
+                    import urllib.request
+                    msg=str(d.get("mensagem") or "").lower().strip()
+                    try:
+                        cur.execute("SELECT id,nome,preco_venda FROM produtos WHERE status='ATIVO' LIMIT 4")
+                        prods=[dict(r) for r in (cur.fetchall() or [])]
+                    except:
+                        prods=[]
+                    def tem(palavras):
+                        return any(x in msg for x in palavras)
+                    # 1 - VENDA / ENCOMENDA sempre primeiro, não vai pra Meta
+                    if tem(["preco","preço","valor","quanto","promo","oferta","combo","quero","pedir","pedido","comprar","encomenda","encomendar","pao","pão","bolo","festa"]):
+                        if tem(["preco","preço","valor","quanto","promo","oferta"]):
+                            resp="Nossas ofertas hoje com preço do cardápio. Quer que eu monte? Levando 5 pães ganha 1 café."
+                        elif tem(["encomenda","encomendar","festa","bolo"]):
+                            resp="Perfeito pra encomenda! Me diz qtd + data da festa que já deixo reservado. Ex: 2kg bolo dia 20."
+                        else:
+                            resp="Perfeito! Me diz qtd, ex: 5 pão + 1 bolo, que já mando pro caixa."
+                        return self.responder({"resposta":resp,"produtos":prods,"origem":"palavra-chave"})
+                    # 2 - INFO PANIFICADORA também direto
+                    if tem(["hora","aberto","fecha","onde","endereco","entrega","telefone"]):
+                        return self.responder({"resposta":"Atendemos seg a sáb 7h às 19h. Rua Central 123. Entrega pelo site e iFood. Quer pedir agora?","produtos":prods,"origem":"info"})
+                    if tem(["oi","ola","bom dia","boa tarde","boa noite"]):
+                        return self.responder({"resposta":"Olá! Sou o bot da padaria. Quer ver pães, bolos ou fazer pedido?","produtos":prods,"origem":"saudacao"})
+                    # 3 - FORA DE CONTEXTO vai pra Meta IA e volta puxando venda
+                    try:
+                        cur.execute("SELECT api_key FROM integracoes_config WHERE tipo='BOT' AND provedor='META_AI' LIMIT 1")
+                        rkey=cur.fetchone()
+                        meta_key=(rkey.get("api_key") if rkey else "") or os.environ.get("META_AI_KEY","")
+                    except:
+                        meta_key=os.environ.get("META_AI_KEY","")
+                    if meta_key:
+                        try:
+                            prompt="Você é vendedor da Padificadora Dona Benta. Responda curto em pt-BR sobre: "+d.get("mensagem","")+". No final sempre ofereça: quer ver combo do dia ou encomendar? Produtos: "+str([p.get("nome") for p in prods])
+                            payload=json.dumps({"model":"llama-3.1-8b-instant","messages":[{"role":"system","content":prompt},{"role":"user","content":d.get("mensagem","")}],"max_tokens":250}).encode()
+                            req=urllib.request.Request("https://api.groq.com/openai/v1/chat/completions",data=payload,headers={"Content-Type":"application/json","Authorization":"Bearer "+meta_key},method="POST")
+                            with urllib.request.urlopen(req,timeout=15) as resp2:
+                                j=json.loads(resp2.read().decode())
+                                txt=j["choices"][0]["message"]["content"].strip()
+                                return self.responder({"resposta":txt,"produtos":prods,"origem":"meta-ia"})
+                        except Exception as e:
+                            pass
+                    return self.responder({"resposta":"Entendi. Sou o bot da padaria, posso ajudar com pedido, preço e horário. O que deseja? Promoção hoje: 10 pães + bolo R$25.","produtos":prods,"origem":"fallback"})
                 if path=="/api/producao/iniciar":
                     cur.execute("INSERT INTO producao_ordens (produto_nome,qtd_meta,responsavel_matricula,responsavel_nome,previsao_fim,custo_insumos,preco_un) VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING id",(d.get("produto_nome"),numero_float(d.get("qtd_meta")),d.get("responsavel_matricula"),d.get("responsavel_nome"),d.get("previsao_fim") or None,numero_float(d.get("custo_insumos")),numero_float(d.get("preco_un"))))
                     return self.responder({"sucesso":True,"id":cur.fetchone()["id"]})
